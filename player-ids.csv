@@ -1,0 +1,575 @@
+id (photo file name),name,country,role
+p1,Jos Buttler,England,WK
+p2,Shreyas Iyer,India,BAT
+p3,Rishabh Pant,India,BAT
+p4,Kagiso Rabada,South Africa,BOWL
+p5,Arshdeep Singh,India,BOWL
+p6,Mitchell Starc,Australia,BOWL
+p7,Yuzvendra Chahal,India,BOWL
+p8,Liam Livingstone,England,AR
+p9,David Miller,South Africa,BAT
+p10,KL Rahul,India,WK
+p11,Mohammad Shami,India,BOWL
+p12,Mohammad Siraj,India,BOWL
+p13,Harry Brook,England,BAT
+p14,Devon Conway,New Zealand,BAT
+p15,Jake Fraser-Mcgurk,Australia,BAT
+p16,Aiden Markram,South Africa,BAT
+p17,Devdutt Padikkal,India,BAT
+p18,Rahul Tripathi,India,BAT
+p19,David Warner,Australia,BAT
+p20,Ravichandaran Ashwin,India,AR
+p21,Venkatesh Iyer,India,AR
+p22,Mitchell Marsh,Australia,AR
+p23,Glenn Maxwell,Australia,AR
+p24,Harshal Patel,India,AR
+p25,Rachin Ravindra,New Zealand,AR
+p26,Marcus Stoinis,Australia,AR
+p27,Jonny Bairstow,England,WK
+p28,Quinton De Kock,South Africa,WK
+p29,Rahmanullah Gurbaz,Afghanistan,WK
+p30,Ishan Kishan,India,WK
+p31,Phil Salt,England,WK
+p32,Jitesh Sharma,India,WK
+p33,Syed Khaleel Ahmed,India,BOWL
+p34,Trent Boult,New Zealand,BOWL
+p35,Josh Hazlewood,Australia,BOWL
+p36,Avesh Khan,India,BOWL
+p37,Prasidh Krishna,India,BOWL
+p38,T. Natarajan,India,BOWL
+p39,Anrich Nortje,South Africa,BOWL
+p40,Noor Ahmad,Afghanistan,BOWL
+p41,Rahul Chahar,India,BOWL
+p42,Wanindu Hasaranga,Sri Lanka,BOWL
+p43,Waqar Salamkheil,Afghanistan,BOWL
+p44,Maheesh Theekshana,Sri Lanka,BOWL
+p45,Adam Zampa,Australia,BOWL
+p46,Yash Dhull,India,BAT
+p47,Abhinav Manohar,India,BAT
+p48,Karun Nair,India,BAT
+p49,Angkrish Raghuvanshi,India,BAT
+p50,Anmolpreet Singh,India,BAT
+p51,Atharva Taide,India,BAT
+p52,Nehal Wadhera,India,BAT
+p53,Harpreet Brar,India,AR
+p54,Naman Dhir,India,AR
+p55,Mahipal Lomror,India,AR
+p56,Sameer Rizvi,India,AR
+p57,Abdul Samad,India,AR
+p58,Vijay Shankar,India,AR
+p59,Ashutosh Sharma,India,AR
+p60,Nishant Sindhu,India,AR
+p61,Utkarsh Singh,India,AR
+p62,Aryan Juyal,India,WK
+p63,Kumar Kushagra,India,WK
+p64,Robin Minz,India,WK
+p65,Anuj Rawat,India,WK
+p66,Luvnith Sisodia,India,WK
+p67,Vishnu Vinod,India,WK
+p68,Upendra Singh Yadav,India,WK
+p69,Vaibhav Arora,India,BOWL
+p70,Rasikh Dar,India,BOWL
+p71,Akash Madhwal,India,BOWL
+p72,Mohit Sharma,India,BOWL
+p73,Simarjeet Singh,India,BOWL
+p74,Yash Thakur,India,BOWL
+p75,Kartik Tyagi,India,BOWL
+p76,Vyshak Vijaykumar,India,BOWL
+p77,Piyush Chawla,India,BOWL
+p78,Shreyas Gopal,India,BOWL
+p79,Mayank Markande,India,BOWL
+p80,Suyash Sharma,India,BOWL
+p81,Karn Sharma,India,BOWL
+p82,Kumar Kartikeya Singh,India,BOWL
+p83,Manav Suthar,India,BOWL
+p84,Mayank Agarawal,India,BAT
+p85,Faf Du Plessis,South Africa,BAT
+p86,Glenn Phillips,New Zealand,BAT
+p87,Rovman Powell,West Indies,BAT
+p88,Ajinkya Rahane,India,BAT
+p89,Prithvi Shaw,India,BAT
+p90,Kane Williamson,New Zealand,BAT
+p91,Sam Curran,England,AR
+p92,Marco Jansen,South Africa,AR
+p93,Daryl Mitchell,New Zealand,AR
+p94,Krunal Pandya,India,AR
+p95,Nitish Rana,India,AR
+p96,Washington Sundar,India,AR
+p97,Shardul Thakur,India,AR
+p98,K.S Bharat,India,WK
+p99,Alex Carey,Australia,WK
+p100,Donovan Ferreira,South Africa,WK
+p101,Shai Hope,West Indies,WK
+p102,Josh Inglis,Australia,WK
+p103,Ryan Rickelton,South Africa,WK
+p104,Deepak Chahar,India,BOWL
+p105,Gerald Coetzee,South Africa,BOWL
+p106,Akash Deep,India,BOWL
+p107,Tushar Deshpande,India,BOWL
+p108,Lockie Ferguson,New Zealand,BOWL
+p109,Bhuvneshwar Kumar,India,BOWL
+p110,Mukesh Kumar,India,BOWL
+p111,Allah Ghazanfar,Afghanistan,BOWL
+p112,Akeal Hosein,West Indies,BOWL
+p113,Keshav Maharaj,South Africa,BOWL
+p114,Mujeeb Ur Rahman,Afghanistan,BOWL
+p115,Adil Rashid,England,BOWL
+p116,Vijayakanth Viyaskanth,Sri Lanka,BOWL
+p117,Ricky Bhui,India,BAT
+p118,Swastik Chhikara,India,BAT
+p119,Aarya Desai,India,BAT
+p120,Shubham Dubey,India,BAT
+p121,Madhav Kaushik,India,BAT
+p122,Pukhraj Mann,India,BAT
+p123,Shaik Rasheed,India,BAT
+p124,Himmat Singh,India,BAT
+p125,Mayank Dagar,India,AR
+p126,Anshul Kamboj,India,AR
+p127,Mohd. Arshad Khan,India,AR
+p128,Darshan Nalkande,India,AR
+p129,Suyash Prabhudessai,India,AR
+p130,Anukul Roy,India,AR
+p131,Swapnil Singh,India,AR
+p132,Sanvir Singh,India,AR
+p133,Avanish Aravelly,India,WK
+p134,Vansh Bedi,India,WK
+p135,Saurav Chauhan,India,WK
+p136,Harvik Desai,India,WK
+p137,Tom Kohler-Cadmore,England,WK
+p138,Kunal Rathore,India,WK
+p139,B.R Sharath,India,WK
+p140,Gurnoor Singh Brar,India,BOWL
+p141,Mukesh Choudhary,India,BOWL
+p142,Sakib Hussain,India,BOWL
+p143,Vidwath Kaverappa,India,BOWL
+p144,Rajan Kumar,India,BOWL
+p145,Sushant Mishra,India,BOWL
+p146,Arjun Tendulkar,India,BOWL
+p147,Zeeshan Ansari,India,BOWL
+p148,Prince Choudhary,India,BOWL
+p149,Himanshu Sharma,India,BOWL
+p150,M. Siddharth,India,BOWL
+p151,Digvesh Singh,India,BOWL
+p152,Prashant Solanki,India,BOWL
+p153,Jhathavedh Subramanyan,India,BOWL
+p154,Finn Allen,New Zealand,BAT
+p155,Dewald Brevis,South Africa,BAT
+p156,Ben Duckett,England,BAT
+p157,Manish Pandey,India,BAT
+p158,Rilee Rossouw,South Africa,BAT
+p159,Sherfane Rutherford,West Indies,BAT
+p160,Ashton Turner,Australia,BAT
+p161,James Vince,England,BAT
+p162,Shahbaz Ahamad,India,AR
+p163,Moeen Ali,England,AR
+p164,Tim David,Australia,AR
+p165,Deepak Hooda,India,AR
+p166,Will Jacks,England,AR
+p167,Azmatullah Omarzai,Afghanistan,AR
+p168,R. Sai Kishore,India,AR
+p169,Romario Shepherd,West Indies,AR
+p170,Tom Banton,England,WK
+p171,Sam Billings,England,WK
+p172,Jordan Cox,England,WK
+p173,Ben McDermott,Australia,WK
+p174,Kusal Mendis,Sri Lanka,WK
+p175,Kusal Perera,Sri Lanka,WK
+p176,Josh Philippe,Australia,WK
+p177,Tim Seifert,New Zealand,WK
+p178,Nandre Burger,South Africa,BOWL
+p179,Spencer Johnson,Australia,BOWL
+p180,Umran Malik,India,BOWL
+p181,Mustafizur Rahman,Bangladesh,BOWL
+p182,Ishant Sharma,India,BOWL
+p183,Nuwan Thushara,Sri Lanka,BOWL
+p184,Naveen Ul Haq,Afghanistan,BOWL
+p185,Jaydev Unadkat,India,BOWL
+p186,Umesh Yadav,India,BOWL
+p187,Rishad Hossain,Bangladesh,BOWL
+p188,Zahir Khan Pakten,Afghanistan,BOWL
+p189,Nqabayomzi Peter,South Africa,BOWL
+p190,Tanveer Sangha,Australia,BOWL
+p191,Tabraiz Shamsi,South Africa,BOWL
+p192,Jeffery Vandersay,Sri Lanka,BOWL
+p193,Sachin Baby,India,BAT
+p194,Priyam Garg,India,BAT
+p195,Harnoor Pannu,India,BAT
+p196,Smaran Ravichandran,India,BAT
+p197,Shashwat Rawat,India,BAT
+p198,Andre Siddarth,India,BAT
+p199,Avneesh Sudha,India,BAT
+p200,Apoorv Wankhade,India,BAT
+p201,Yudhvir Charak,India,AR
+p202,Rishi Dhawan,India,AR
+p203,Rajvardhan Hangargekar,India,AR
+p204,Tanush Kotian,India,AR
+p205,Arshin Kulkarni,India,AR
+p206,Shams Mulani,India,AR
+p207,Shivam Singh,India,AR
+p208,Lalit Yadav,India,AR
+p209,Mohammed Azharuddeen,India,WK
+p210,L.R Chethan,India,WK
+p211,Aryaman Singh Dhaliwal,India,WK
+p212,Urvil Patel,India,WK
+p213,Sanskar Rawat,India,WK
+p214,Bipin Saurabh,India,WK
+p215,Tanay Thyagarajann,India,WK
+p216,Money Grewal,India,BOWL
+p217,Ashwani Kumar,India,BOWL
+p218,Ishan Porel,India,BOWL
+p219,Abhilash Shetty,India,BOWL
+p220,Akash Singh,India,BOWL
+p221,Gurjapneet Singh,India,BOWL
+p222,Basil Thampi,India,BOWL
+p223,Murugan Ashwin,India,BOWL
+p224,Shreyas Chavan,India,BOWL
+p225,Chintal Gandhi,India,BOWL
+p226,Raghav Goyal,India,BOWL
+p227,Jagadeesha Suchith,India,BOWL
+p228,Roshan Waghsare,India,BOWL
+p229,Bailapudi Yeswanth,India,BOWL
+p230,Sediqullah Atal,Afghanistan,BAT
+p231,Matthew Breetzke,South Africa,BAT
+p232,Mark Chapman,New Zealand,BAT
+p233,Brandon King,West Indies,BAT
+p234,Evin Lewis,West Indies,BAT
+p235,Pathum Nissanka,Sri Lanka,BAT
+p236,Bhanuka Rajapaksa,Sri Lanka,BAT
+p237,Steve Smith,Australia,BAT
+p238,Gus Atkinson,England,AR
+p239,Tom Curran,England,AR
+p240,Krishnappa Gowtham,India,AR
+p241,Mohammad Nabi,Afghanistan,AR
+p242,Gulbadin Naib,Afghanistan,AR
+p243,Sikandar Raza,Zimbabwe,AR
+p244,Mitchell Santner,New Zealand,AR
+p245,Jayant Yadav,India,AR
+p246,Johnson Charles,West Indies,WK
+p247,Litton Das,Bangladesh,WK
+p248,Andre Fletcher,West Indies,WK
+p249,Tom Latham,New Zealand,WK
+p250,Ollie Pope,England,WK
+p251,Kyle Verreynne,South Africa,WK
+p252,Fazalhaq Farooqi,Afghanistan,BOWL
+p253,Richard Gleeson,England,BOWL
+p254,Matt Henry,New Zealand,BOWL
+p255,Alzarri Joseph,West Indies,BOWL
+p256,Kwena Maphaka,South Africa,BOWL
+p257,Kuldeep Sen,India,BOWL
+p258,Reece Topley,England,BOWL
+p259,Lizaad Williams,South Africa,BOWL
+p260,Luke Wood,England,BOWL
+p261,Sachin Dhas,India,BAT
+p262,Leus Du Plooy,England,BAT
+p263,Ashwin Hebbar,India,BAT
+p264,Rohan Kunnummal,India,BAT
+p265,Ayush Pandey,India,BAT
+p266,Akshat Raghuwanshi,India,BAT
+p267,Shoun Roger,India,BAT
+p268,Virat Singh,India,BAT
+p269,Priyansh Arya,India,AR
+p270,Manoj Bhandage,India,AR
+p271,Pravin Dubey,India,AR
+p272,Ajay Mandal,India,AR
+p273,Prerak Mankad,India,AR
+p274,Vipraj Nigam,India,AR
+p275,Vicky Ostwal,India,AR
+p276,Shivalik Sharma,India,AR
+p277,Salil Arora,India,WK
+p278,Dinesh Bana,India,WK
+p279,Ajitesh Guruswamy,India,WK
+p280,Narayan Jagadeesan,India,WK
+p281,Shrijith Krishnan,India,WK
+p282,Michael Pepper,England,WK
+p283,Vishnu Solanki,India,WK
+p284,K.M Asif,India,BOWL
+p285,Akhil Chaudhary,India,BOWL
+p286,Himanshu Chauhan,India,BOWL
+p287,Arpit Guleria,India,BOWL
+p288,Nishanth Saranu,India,BOWL
+p289,Kuldip Yadav,India,BOWL
+p290,Prithviraj Yarra,India,BOWL
+p291,Shubham Agrawal,India,BOWL
+p292,Jass Inder Baidwan,India,BOWL
+p293,Jasmer Dhankhar,India,BOWL
+p294,Pulkit Narang,India,BOWL
+p295,Saumy Pandey,India,BOWL
+p296,Mohit Rathee,India,BOWL
+p297,Himanshu Singh,India,BOWL
+p298,Towhid Hridoy,Bangladesh,BAT
+p299,Mikyle Louis,West Indies,BAT
+p300,Harry Tector,Ireland,BAT
+p301,Rassie Van Der Dussen,South Africa,BAT
+p302,Will Young,New Zealand,BAT
+p303,Najibullah Zadran,Afghanistan,BAT
+p304,Ibrahim Zadran,Afghanistan,BAT
+p305,Sean Abbott,Australia,AR
+p306,Jacob Bethell,England,AR
+p307,Brydon Carse,England,AR
+p308,Aaron Hardie,Australia,AR
+p309,Sarfaraz Khan,India,AR
+p310,Kyle Mayers,West Indies,AR
+p311,Kamindu Mendis,Sri Lanka,AR
+p312,Matthew Short,Australia,AR
+p313,Jason Behrendorff,Australia,BOWL
+p314,Dushmantha Chameera,Sri Lanka,BOWL
+p315,Nathan Ellis,Australia,BOWL
+p316,Shamar Joseph,West Indies,BOWL
+p317,Josh Little,Ireland,BOWL
+p318,Shivam Mavi,India,BOWL
+p319,Jhye Richardson,Australia,BOWL
+p320,Navdeep Saini,India,BOWL
+p321,Tanmay Agarwal,India,BAT
+p322,Amandeep Khare,India,BAT
+p323,Ayush Mhatre,India,BAT
+p324,Salman Nizar,India,BAT
+p325,Aniket Verma,India,BAT
+p326,Sumeet Verma,India,BAT
+p327,Manan Vohra,India,BAT
+p328,Samarth Vyas,India,BAT
+p329,Raj Angad Bawa,India,AR
+p330,Emanjot Chahal,India,AR
+p331,Musheer Khan,India,AR
+p332,Manvanth Kumar L,India,AR
+p333,Mayank Rawat,India,AR
+p334,Suryansh Shedge,India,AR
+p335,Hritik Shokeen,India,AR
+p336,Sonu Yadav,India,AR
+p337,S. Rithik Easwaran,India,WK
+p338,Anmol Malhotra,India,WK
+p339,Pradosh Paul,India,WK
+p340,Karteek Sharma,India,WK
+p341,Akash Singh,India,WK
+p342,Tejasvi Singh,India,WK
+p343,Siddharth Yadav,India,WK
+p344,Saurabh Dubey,India,BOWL
+p345,Aaqib Khan,India,BOWL
+p346,Kulwant Khejroliya,India,BOWL
+p347,Ankit Singh Rajpoot,India,BOWL
+p348,Divesh Sharma,India,BOWL
+p349,Naman Tiwari,India,BOWL
+p350,Prince Yadav,India,BOWL
+p351,Kunal Singh Chibb,India,BOWL
+p352,Yuvraj Chudasama,India,BOWL
+p353,Deepak Devadiga,India,BOWL
+p354,Ramesh Prasad,India,BOWL
+p355,Shivam Shukla,India,BOWL
+p356,Himanshu Singh,India,BOWL
+p357,Tejpreet Singh,India,BOWL
+p358,Qais Ahmad,Afghanistan,AR
+p359,Charith Asalanka,Sri Lanka,AR
+p360,Michael Bracewell,New Zealand,AR
+p361,Gudakesh Motie,West Indies,AR
+p362,Daniel Mousley,England,AR
+p363,Jamie Overton,England,AR
+p364,Dunith Wellalage,Sri Lanka,AR
+p365,Ottneil Baartman,South Africa,BOWL
+p366,Xavier Bartlett,Australia,BOWL
+p367,Dilshan Madushanka,Sri Lanka,BOWL
+p368,Adam Milne,New Zealand,BOWL
+p369,Lungisani Ngidi,South Africa,BOWL
+p370,William O'Rourke,New Zealand,BOWL
+p371,Chetan Sakariya,India,BOWL
+p372,Sandeep Warrier,India,BOWL
+p373,Musaif Ajaz,India,BAT
+p374,Agni Chopra,India,BAT
+p375,Abhimanyu Easwaran,India,BAT
+p376,Sudip Gharami,India,BAT
+p377,Shubham Khajuria,India,BAT
+p378,Akhil Rawat,India,BAT
+p379,Prateek Yadav,India,BAT
+p380,Abdul Bazith,India,AR
+p381,K.C Cariappa,India,AR
+p382,Yuvraj Chaudhary,India,AR
+p383,Aman Khan,India,AR
+p384,Sumit Kumar,India,AR
+p385,Kamlesh Nagarkoti,India,AR
+p386,Hardik Raj,India,AR
+p387,Harsh Tyagi,India,AR
+p388,M. Ajnas,India,WK
+p389,Unmukt Chand,USA,WK
+p390,Tejasvi Dahiya,India,WK
+p391,Sumit Ghadigaonkar,India,WK
+p392,Baba Indrajith,India,WK
+p393,Muhammed Khan,India,WK
+p394,Bhagmender Lather,India,WK
+p395,Baltej Dhanda,India,BOWL
+p396,Ali Khan,USA,BOWL
+p397,Ravi Kumar,India,BOWL
+p398,Vineet Panwar,India,BOWL
+p399,Vidyadhar Patil,India,BOWL
+p400,Aradhya Shukla,India,BOWL
+p401,Abhinandan Singh,India,BOWL
+p402,Cooper Connolly,Australia,AR
+p403,Dushan Hemantha,Sri Lanka,AR
+p404,Jason Holder,West Indies,AR
+p405,Karim Janat,Afghanistan,AR
+p406,Jimmy Neesham,New Zealand,AR
+p407,Daniel Sams,Australia,AR
+p408,William Sutherland,Australia,AR
+p409,Taskin Ahmed,Bangladesh,BOWL
+p410,Ben Dwarshuis,Australia,BOWL
+p411,Obed McCoy,West Indies,BOWL
+p412,Riley Meredith,Australia,BOWL
+p413,Lance Morris,Australia,BOWL
+p414,Olly Stone,England,BOWL
+p415,Daniel Worrall,England,BOWL
+p416,Pyla Avinash,India,BAT
+p417,Kiran Chormale,India,BAT
+p418,Ashish Dahariya,India,BAT
+p419,Tushar Raheja,India,BAT
+p420,Sarthak Ranjan,India,BAT
+p421,Abhijeet Tomar,India,BAT
+p422,Krish Bhagat,India,AR
+p423,Sohraab Dhaliwal,India,AR
+p424,Harsh Dubey,India,AR
+p425,Ramakrishna Ghosh,India,AR
+p426,Raj Limbani,India,AR
+p427,Ninad Rathva,India,AR
+p428,Vivrant Sharma,India,AR
+p429,Shiva Singh,India,AR
+p430,Sayed Irfan Aftab,India,BOWL
+p431,Anirudh Chowdhary,India,BOWL
+p432,Anshuman Hooda,India,BOWL
+p433,Siddharth Kaul,India,BOWL
+p434,Prashant Sai Painkra,India,BOWL
+p435,Venkata Satyanarayana Penmetsa,India,BOWL
+p436,Yeddala Reddy,India,BOWL
+p437,Zak Foulkes,New Zealand,AR
+p438,Chris Green,Australia,AR
+p439,Shakib Al Hasan,Bangladesh,AR
+p440,Mehidy Hasan Miraz,Bangladesh,AR
+p441,Wiaan Mulder,South Africa,AR
+p442,Dwaine Pretorius,South Africa,AR
+p443,Dasun Shanaka,Sri Lanka,AR
+p444,Shoriful Islam,Bangladesh,BOWL
+p445,Blessing Muzarabani,Zimbabwe,BOWL
+p446,Matthew Potts,England,BOWL
+p447,Tanzim Hasan Sakib,Bangladesh,BOWL
+p448,Benjamin Sears,New Zealand,BOWL
+p449,Tim Southee,New Zealand,BOWL
+p450,John Turner,England,BOWL
+p451,Joshua Brown,Australia,BAT
+p452,Oliver Davies,Australia,BAT
+p453,Bevan John Jacobs,New Zealand,BAT
+p454,Atharva Kale,India,BAT
+p455,Abhishek Nair,India,BAT
+p456,Vishwanath Pratap Singh,India,BAT
+p457,Nasir Lone,India,AR
+p458,Brandon McMullen,Scotland,AR
+p459,S. Midhun,India,AR
+p460,Abid Mushtaq,India,AR
+p461,Mahesh Pithiya,India,AR
+p462,Maramreddy Reddy,India,AR
+p463,Atit Sheth,India,AR
+p464,Jonty Sidhu,India,AR
+p465,Mohit Avasthi,India,BOWL
+p466,Faridoon Dawoodzai,Afghanistan,BOWL
+p467,Praful Hinge,India,BOWL
+p468,Pankaj Jaswal,India,BOWL
+p469,Vijay Kumar,India,BOWL
+p470,Ashok Sharma,India,BOWL
+p471,Mujtaba Yousuf,India,BOWL
+p472,Ashton Agar,Australia,AR
+p473,Roston Chase,West Indies,AR
+p474,Junior Dala,South Africa,AR
+p475,Mahedi Hasan,Bangladesh,AR
+p476,Nangeyalia Kharote,Afghanistan,AR
+p477,Dan Lawrence,England,AR
+p478,Nathan Smith,New Zealand,AR
+p479,James Anderson,England,BOWL
+p480,Kyle Jamieson,New Zealand,BOWL
+p481,Chris Jordan,England,BOWL
+p482,Hasan Mahmud,Bangladesh,BOWL
+p483,Tymal Mills,England,BOWL
+p484,David Payne,England,BOWL
+p485,Nahid Rana,Bangladesh,BOWL
+p486,Prayas Ray Barman,India,BAT
+p487,Jafar Jamal,India,BAT
+p488,Ayaz Khan,India,BAT
+p489,Kaushik Maity,India,BAT
+p490,Rituraj Sharma,India,BAT
+p491,Vaibhav Suryavanshi,India,BAT
+p492,Kartik Chadha,India,AR
+p493,Writtick Chatterjee,India,AR
+p494,Prerit Dutta,India,AR
+p495,Rajneesh Gurbani,India,AR
+p496,Shubhang Hegde,India,AR
+p497,Saransh Jain,India,AR
+p498,Ripal Patel,India,AR
+p499,Akash Vashisht,India,AR
+p500,Anirudh Kanwar,India,BOWL
+p501,Shubham Kapse,India,BOWL
+p502,Atif Mushtaq,India,BOWL
+p503,Dipesh Parwani,India,BOWL
+p504,Manish Reddy,India,BOWL
+p505,Chetan Sharma,India,BOWL
+p506,Avinash Singh,India,BOWL
+p507,Alick Athanaze,West Indies,AR
+p508,Hilton Cartwright,Australia,AR
+p509,Dominic Drakes,West Indies,AR
+p510,Daryn Dupavillon,South Africa,BOWL
+p511,Matthew Forde,West Indies,AR
+p512,Patrick Kruger,South Africa,AR
+p513,Lahiru Kumara,Sri Lanka,BOWL
+p514,Michael Neser,Australia,AR
+p515,Richard Ngarava,Zimbabwe,BOWL
+p516,Wayne Parnell,South Africa,BOWL
+p517,Keemo Paul,West Indies,AR
+p518,Odean Smith,West Indies,AR
+p519,Andrew Tye,Australia,BOWL
+p520,Ajay Ahlawat,India,AR
+p521,Corbin Bosch,South Africa,AR
+p522,Mayank Gusain,India,AR
+p523,Mukhtar Hussain,India,AR
+p524,Girinath Reddy,India,AR
+p525,Jalaj Saxena,India,AR
+p526,Yajas Sharma,India,AR
+p527,Sanjay Yadav,India,AR
+p528,Vishal Godara,India,BOWL
+p529,Eshan Malinga,Sri Lanka,BOWL
+p530,Samarth Nagraj,India,BOWL
+p531,Abhishek Saini,India,BOWL
+p532,Dumindu Sewmina,Sri Lanka,BOWL
+p533,Pradyuman Kumar Singh,India,BOWL
+p534,Vasu Vats,India,BOWL
+p535,Umang Kumar,India,AR
+p536,Mohamed Ali,India,AR
+p537,Atharva Ankolekar,India,AR
+p538,Vaisakh Chandran,India,AR
+p539,Auqib Dar,India,AR
+p540,Rohit Rayudu,India,AR
+p541,Uday Saharan,India,AR
+p542,Ayush Vartak,India,AR
+p543,Baba Aparajith,India,AR
+p544,Sumit Kumar Beniwal,India,AR
+p545,Nishunk Birla,India,AR
+p546,Digvijay Deshmukh,India,AR
+p547,Lakshay Jain,India,AR
+p548,Duan Jansen,South Africa,AR
+p549,Kritagya Singh,India,AR
+p550,P. Vignesh,India,AR
+p551,Sabhay Chadha,India,AR
+p552,Ben Howell,England,AR
+p553,Hemanth Kumar,India,AR
+p554,Rohan Rana,India,AR
+p555,Bharat Sharma,India,AR
+p556,Pratham Singh,India,AR
+p557,Tripurana Vijay,India,AR
+p558,Ravi Yadav,India,AR
+p559,Arjun Azad,India,AR
+p560,Abhay Choudhary,India,AR
+p561,Gaurav Gambhir,India,AR
+p562,Shubham Garhwal,India,AR
+p563,Tejasvi Jaiswal,India,AR
+p564,Sairaj Patil,India,AR
+p565,Madhav Tiwari,India,AR
+p566,Kamal Tripathi,India,AR
+p567,Prashant Chauhan,India,AR
+p568,Yash Dabas,India,AR
+p569,Dhruv Kaushik,India,AR
+p570,Khrievitso Kense,India,AR
+p571,Akash Parkar,India,AR
+p572,Vignesh Puthur,India,AR
+p573,Tripuresh Singh,India,AR
+p574,Vijay Yadav,India,AR
