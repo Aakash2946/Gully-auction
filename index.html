@@ -41,6 +41,7 @@ textarea{width:100%;min-height:200px;font:12px/1.4 ui-monospace,monospace}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
+<script src="players.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -97,7 +98,7 @@ async function create(){
  if(!D||!uid)return toast('Still connecting — try again in a moment.');
  const nm=$('#nm').value.trim();if(!nm)return toast('Enter your name (top right) first.');try{localStorage.setItem('ga_name',nm)}catch(e){}
  const code=String(Math.floor(100000+Math.random()*900000));enter(code);
- const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));c.settings.purse=m[2];c.settings.maxSquad=m[1];
+ const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));c.settings.purse=m[2];c.settings.maxSquad=m[1];if(window.PLAYERS)c.players=window.PLAYERS;
  await db.doc('meta/room').set({hostUid:uid});await db.doc('cfg/main').set(c);await db.doc('owners/'+pf).set({uid,name:nm});location.hash=code;
 }
 function join(){const c=$('#rc').value.trim();if(!/^\d{6}$/.test(c))return toast('Enter a 6-digit code.');toast('');location.hash=c;enter(c)}
@@ -119,7 +120,7 @@ function rAuction(v){
  let h='';
  h+=`<div class="card"><div class="row sp"><div>${me?`You are <b style="color:${me.color}">${esc(me.name)}</b> · purse <b>${fmt(left(me.id))}</b> · squad ${squad(me.id).length}/${S().maxSquad}`:'<b>Pick a team</b> in the Teams tab to start bidding.'}</div></div></div>`;
  if(p){const bt=team(lot.team);
-  h+=`<div class="card"><div class="row sp"><div><span class="tag">${esc(p.role)}</span> <span class="tag">Base ${fmt(p.base)}</span> <span class="tag">OVR ${ovr(p)}</span>
+  h+=`<div class="card"><div class="row sp"><div><span class="tag">${esc(p.role)}</span> <span class="tag">Base ${fmt(p.base)}</span> <span class="tag">OVR ${ovr(p)}</span>${p.country?` <span class="tag">${esc(p.country)}</span>`:''}
   <h2 style="margin:6px 0">${esc(p.name)}</h2><a href="#" class="mut" onclick="stats('${p.id}');return false">View past stats</a></div>
   <div style="text-align:right"><div class="big">${fmt(lot.bid)}</div><div>${bt?`<span class="dot" style="background:${bt.color}"></span> ${esc(bt.name)}`:'<span class="mut">No bids yet</span>'}</div>
   <div id="tm" class="timer"></div></div></div>
@@ -132,7 +133,8 @@ function rAuction(v){
  v.innerHTML=h;tick();
 }
 const remaining=()=>cfg?cfg.players.filter(p=>!sold[p.id]):[];
-function nextBid(){return lot.team?+(lot.bid+S().inc).toFixed(2):lot.bid}
+const incFor=b=>b<1?.05:b<2?.1:b<5?.2:.25;
+function nextBid(){return lot.team?+(lot.bid+incFor(lot.bid)).toFixed(2):lot.bid}
 async function bid(){
  const me=mine();if(!me)return toast('Pick a team in the Teams tab first.');
  if(!lot||lot.status!=='bidding'||Date.now()>lot.endsAt)return;
@@ -179,12 +181,18 @@ async function claim(id){
 }
 const release=id=>db.doc('owners/'+id).delete();
 function rPlayers(v){
- v.innerHTML=`<div class="card wrap"><table><tr><th>Player</th><th>Role</th><th>Base</th><th>OVR</th><th>Matches</th><th>Runs</th><th>Wkts</th><th>Status</th></tr>`+cfg.players.map(p=>{const c=career(p),s=sold[p.id],t=s&&team(s.team);
-  return `<tr class="pl" onclick="stats('${p.id}')"><td><b>${esc(p.name)}</b></td><td>${esc(p.role)}</td><td>${fmt(p.base)}</td><td><b>${ovr(p)}</b></td><td>${c.m}</td><td>${c.r}</td><td>${c.w}</td><td>${s?(t?`<span class="dot" style="background:${t.color}"></span> ${esc(t.name)} ${fmt(s.price)}`:'Unsold'):'<span class="mut">Pending</span>'}</td></tr>`}).join('')+'</table></div>';
+ v.innerHTML=`<div class="card wrap"><table><tr><th>Player</th><th>Role</th><th>Base</th><th>OVR</th><th>Country</th><th>Age</th><th>IPL</th><th>T20I</th><th>Status</th></tr>`+cfg.players.map(p=>{const c=career(p),s=sold[p.id],t=s&&team(s.team);
+  return `<tr class="pl" onclick="stats('${p.id}')"><td><b>${esc(p.name)}</b></td><td>${esc(p.role)}</td><td>${fmt(p.base)}</td><td><b>${ovr(p)}</b></td><td>${esc(p.country||'')}</td><td>${p.age||''}</td><td>${(p.caps||{}).ipl||0}</td><td>${(p.caps||{}).t20||0}</td><td>${s?(t?`<span class="dot" style="background:${t.color}"></span> ${esc(t.name)} ${fmt(s.price)}`:'Unsold'):'<span class="mut">Pending</span>'}</td></tr>`}).join('')+'</table></div>';
 }
+function capsModal(p){const k=p.caps;
+ $('#modal').innerHTML=`<div class="modal" onclick="if(event.target===this)this.remove()"><div><div class="row sp"><h2 style="margin:0">${esc(p.name)}</h2><button onclick="this.closest('.modal').remove()">✕</button></div>
+ <p class="mut"><span class="tag">${esc(p.role)}</span> ${esc(p.country||'')}${p.age?' · age '+p.age:''} · Base ${fmt(p.base)} · <b>OVR ${ovr(p)}</b></p>
+ <p class="mut">${p.bat?'Bats '+esc(p.bat):''}${p.bowl?' · Bowls '+esc(p.bowl):''}${p.set?' · Set '+esc(p.set):''}</p>
+ <div class="wrap"><table><tr><th>Format</th><th>Matches played</th></tr><tr><td>IPL</td><td>${k.ipl||0}</td></tr><tr><td>T20 internationals</td><td>${k.t20||0}</td></tr><tr><td>ODI</td><td>${k.odi||0}</td></tr><tr><td>Test</td><td>${k.test||0}</td></tr></table></div>
+ <p class="mut" style="font-size:12px">OVR is based on match experience across formats and the base price.</p></div></div>`}
 function career(p){const st=p.stats||[];const m=st.reduce((a,s)=>a+(+s.m||0),0),r=st.reduce((a,s)=>a+(+s.r||0),0),w=st.reduce((a,s)=>a+(+s.w||0),0);return{m,r,w,avg:m?(r/m).toFixed(1):'-'}}
 function stats(id){
- const p=ply(id);if(!p)return;const c=career(p);
+ const p=ply(id);if(!p)return;if(p.caps)return capsModal(p);const c=career(p);
  $('#modal').innerHTML=`<div class="modal" onclick="if(event.target===this)this.remove()"><div><div class="row sp"><h2 style="margin:0">${esc(p.name)}</h2><button onclick="this.closest('.modal').remove()">✕</button></div>
  <p class="mut"><span class="tag">${esc(p.role)}</span> Base ${fmt(p.base)} · <b>OVR ${ovr(p)}</b> · ${c.m} matches · ${c.r} runs · ${c.w} wickets · ${c.avg} runs/match</p>
  <div class="wrap"><table><tr><th>Season</th><th>Mat</th><th>Runs</th><th>SR</th><th>Wkts</th><th>Econ</th></tr>${(p.stats||[]).map(s=>`<tr><td>${esc(s.y)}</td><td>${esc(s.m)}</td><td>${esc(s.r)}</td><td>${esc(s.sr)}</td><td>${esc(s.w)}</td><td>${esc(s.e)}</td></tr>`).join('')||'<tr><td colspan="6" class="mut">No past data</td></tr>'}</table></div></div></div>`;
@@ -195,12 +203,12 @@ function rSetup(v){
  <div class="row" style="margin-top:8px"><button class="pri" onclick="saveCfg()">Save setup</button><button onclick="$('#js').value=JSON.stringify(SAMPLE,null,1)">Fill sample</button></div></div>
  <div class="card"><b>Import players (CSV)</b><div class="mut">One per line: name, role (BAT/BOWL/AR/WK), base, matches, runs, strike rate, wickets, economy</div>
  <textarea id="csv" style="min-height:90px" placeholder="Rahul, BAT, 1.5, 24, 610, 135, 0, 0"></textarea>
- <div class="row" style="margin-top:8px"><button onclick="importCsv()">Add to setup</button></div></div>
+ <div class="row" style="margin-top:8px"><button onclick="importCsv()">Add to setup</button><button class="warn" onclick="importCsv(true)">Replace all players</button></div></div>
  <div class="card"><b>Danger zone</b><div class="row" style="margin-top:8px"><button class="warn" onclick="resetAuction()">Reset auction (keeps setup)</button></div></div>`;
 }
-function importCsv(){
- try{const c=JSON.parse($('#js').value);
- $('#csv').value.split('\n').filter(l=>l.trim()).forEach((l,i)=>{const a=l.split(',').map(x=>x.trim());
+function importCsv(rep){
+ try{const c=JSON.parse($('#js').value);if(rep)c.players=[];
+ $('#csv').value.split('\n').filter(l=>l.trim()&&!/^name\s*,/i.test(l.trim())).forEach((l,i)=>{const a=l.split(',').map(x=>x.trim());
   c.players.push({id:'p'+Date.now().toString(36)+i,name:a[0],role:(a[1]||'BAT').toUpperCase(),base:+a[2]||0.5,stats:[{y:'Career',m:+a[3]||0,r:+a[4]||0,sr:+a[5]||0,w:+a[6]||0,e:+a[7]||0}]})});
  $('#js').value=JSON.stringify(c,null,1);$('#csv').value=''}catch(e){toast('Fix the JSON first: '+esc(e.message))}
 }
@@ -213,7 +221,7 @@ async function resetAuction(){
  for(const k of Object.keys(sold))await db.doc('sold/'+k).delete();
  await db.doc('live/lot').delete();
 }
-function ovr(p){const st=p.stats||[],n=st.length||1,c=career(p),m=c.m||1,sr=st.reduce((a,s)=>a+(+s.sr||0),0)/n,e=st.reduce((a,s)=>a+(+s.e||0),0)/n;
+function ovr(p){if(p.caps){const k=p.caps,w=(k.ipl||0)+.7*(k.t20||0)+.3*(k.odi||0)+.3*(k.test||0);return Math.max(50,Math.min(95,Math.round(56+13*Math.log10(1+w)+(p.base||0)*2)))}const st=p.stats||[],n=st.length||1,c=career(p),m=c.m||1,sr=st.reduce((a,s)=>a+(+s.sr||0),0)/n,e=st.reduce((a,s)=>a+(+s.e||0),0)/n;
  const bat=55+c.r/m*.35+(sr-120)*.3,bowl=55+c.w/m*14-(e-8)*3;
  const v=p.role==='BOWL'?bowl:p.role==='AR'?(bat+bowl)/2+4:bat;return Math.max(50,Math.min(99,Math.round(v)))}
 function xi(id){
