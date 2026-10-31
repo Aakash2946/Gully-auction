@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gully Auction</title>
+<style>
+:root,:root[data-theme="scoreboard"]{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#07120d;--card:#0e2118;--ink:#f4efe0;--mut:#8fa596;--line:#21402f;--acc:#ffb400;--acc2:#ffd24a;--bad:#ff5a4d;--onacc:#1a1200;--glow:#ffb40088;--stripe:#ffffff08}
+@media (prefers-color-scheme:light){:root:not([data-theme]){--bg:#f3ecd9;--card:#fffaf0;--ink:#2a2118;--mut:#7a6a55;--line:#dccfb4;--acc:#8c1d2c;--acc2:#a9731a;--bad:#b91c1c;--onacc:#ffffff;--glow:#8c1d2c22;--stripe:#8c6a2a0d}}
+:root[data-theme="pavilion"]{--bg:#f3ecd9;--card:#fffaf0;--ink:#2a2118;--mut:#7a6a55;--line:#dccfb4;--acc:#8c1d2c;--acc2:#a9731a;--bad:#b91c1c;--onacc:#ffffff;--glow:#8c1d2c22;--stripe:#8c6a2a0d}
+:root[data-theme="floodlight"]{--bg:#05060f;--card:#0e1124;--ink:#eaf0ff;--mut:#8a93b8;--line:#252b52;--acc:#00e5ff;--acc2:#ff3df2;--bad:#ff6b6b;--onacc:#001418;--glow:#00e5ff99;--stripe:#00e5ff08}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg) repeating-linear-gradient(90deg,transparent 0 70px,var(--stripe) 70px 140px);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card)}
+h1{font:900 22px/1 "Courier New",ui-monospace,monospace;margin:0;letter-spacing:2px;color:var(--acc);text-shadow:0 0 14px var(--glow)}h1 span{color:var(--ink)}
+main{max-width:1000px;margin:0 auto;padding:14px}
+nav{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;white-space:nowrap}
+button.on,button.pri{background:var(--acc);color:var(--onacc);border-color:var(--acc);font-weight:600}
+button.warn{border-color:var(--bad);color:var(--bad)}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%}
+.card{background:var(--card);box-shadow:inset 0 0 0 1px var(--line),0 6px 18px #0004;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.mut{color:var(--mut)}.big{font:800 40px/1 "Courier New",ui-monospace,monospace;color:var(--acc2);text-shadow:0 0 14px var(--glow)}
+.tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{justify-content:space-between}
+.dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.wrap{overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.timer{font:800 28px "Courier New",ui-monospace,monospace;color:var(--acc);text-shadow:0 0 12px var(--glow)}.lowt{color:var(--bad)}
+.modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal>div{background:var(--card);border-radius:14px;padding:16px;max-width:560px;width:100%;max-height:85vh;overflow:auto}
+textarea{width:100%;min-height:200px;font:12px/1.4 ui-monospace,monospace}
+.pl{cursor:pointer}.pl:hover{border-color:var(--acc)}
+</style></head><body>
+<header><h1>GULLY <span>AUCTION</span></h1>
+<div class="row"><input id="nm" placeholder="Your name" size="12"><select id="th" title="Theme"><option value="">Auto</option><option value="scoreboard">Scoreboard</option><option value="pavilion">Pavilion</option><option value="floodlight">Floodlight</option></select><span id="who" class="tag"></span></div></header>
+<main><div id="msg"></div><nav id="nav"></nav><div id="view"></div></main>
+<div id="modal"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>(+n).toFixed(2)+' Cr';
+const SAMPLE={settings:{purse:100,timer:20,reset:8,inc:0.25,maxSquad:11},
+teams:[["Royal Strikers","#2563eb"],["Gully Kings","#dc2626"],["Night Owls","#7c3aed"],["Sunrisers XI","#ea580c"],["Green Mambas","#16a34a"],["Street Titans","#0891b2"]].map((t,i)=>({id:"t"+i,name:t[0],color:t[1]})),
+players:[["Arjun Rao","BAT",2],["Kabir Shah","BOWL",1.5],["Dev Malhotra","AR",2],["Rohan Iyer","WK",1.5],["Sameer Khan","BAT",1],["Vikram Nair","BOWL",1],["Aditya Verma","AR",1.5],["Nikhil Joshi","BAT",1],["Tarun Das","BOWL",0.5],["Yash Patel","WK",1],["Manav Singh","AR",1],["Harsh Menon","BOWL",0.5]].map((p,i)=>({id:"p"+i,name:p[0],role:p[1],base:p[2],stats:[{y:"Season 1",m:8+i%3,r:p[1]==="BOWL"?20+i*3:150+i*22,sr:p[1]==="BOWL"?95:128+i,w:p[1]==="BAT"||p[1]==="WK"?0:5+i%6,e:7+(i%5)/4},{y:"Season 2",m:9,r:p[1]==="BOWL"?30:180+i*15,sr:132,w:p[1]==="BAT"||p[1]==="WK"?0:6+i%4,e:7.6}]}))};
+const FN=['Arjun','Kabir','Dev','Rohan','Sameer','Vikram','Aditya','Nikhil','Tarun','Yash'],LN=['Rao','Shah','Malhotra','Iyer','Khan','Nair','Verma','Joshi','Das','Patel','Menon','Singh'],RL=['BAT','BOWL','AR','WK','BAT','BOWL','AR','BAT','BOWL','AR'];
+SAMPLE.settings={purse:100,timer:20,reset:8,inc:0.25,maxSquad:15};
+SAMPLE.teams=[['CSK','#f5b800'],['MI','#1d4ed8'],['RCB','#dc2626'],['KKR','#6d28d9'],['DC','#2563eb'],['RR','#ec4899'],['PBKS','#e11d48'],['SRH','#f97316'],['LSG','#0ea5e9'],['GT','#1e3a8a']].map((t,i)=>({id:'t'+i,name:t[0],color:t[1]}));
+SAMPLE.players=Array.from({length:200},(_,i)=>{const r=RL[i%10],b=r==='BOWL',w=r==='BAT'||r==='WK';return{id:'p'+i,name:FN[i%10]+' '+LN[(i*7)%12]+(i>=60?' '+'ABC'[Math.floor(i/60)-1]:''),role:r,base:[2,1.5,1,0.5][i%4],stats:[1,2].map(k=>({y:'Season '+k,m:9+(i+k)%5,r:b?15+(i*3+k*5)%30:w?220+((i*37+k*11)%260):120+((i*29+k*13)%200),sr:b?90:122+(i*5+k)%26,w:w?0:4+(i*3+k)%11,e:b?6.8+((i+k)%9)/5:7.5+((i+k)%7)/6}))}});
+let db,D,room='',meta=null,uid=null,host=false,cfg=null,lot=null,sold={},owners={},tab='auction',fin='',loaded={c:0};
+const S=()=>cfg&&cfg.settings||SAMPLE.settings;
+const ply=id=>cfg&&cfg.players.find(p=>p.id===id);
+const team=id=>cfg&&cfg.teams.find(t=>t.id===id);
+const mine=()=>cfg&&cfg.teams.find(t=>owners[t.id]&&owners[t.id].uid===uid);
+const spent=t=>Object.values(sold).filter(s=>s.team===t).reduce((a,s)=>a+s.price,0);
+const squad=t=>Object.values(sold).filter(s=>s.team===t);
+const left=t=>S().purse-spent(t);
+const myName=()=>{try{return localStorage.getItem('ga_name')||''}catch(e){return''}};
+function toast(t){$('#msg').innerHTML=t?`<div class="card" style="border-color:var(--bad)">${t}</div>`:''}
+
+async function init(){
+ const th=$('#th');try{const t=localStorage.getItem('ga_theme')||'';if(t)document.documentElement.dataset.theme=t;th.value=t}catch(e){}
+ th.onchange=()=>{if(th.value)document.documentElement.dataset.theme=th.value;else delete document.documentElement.dataset.theme;try{localStorage.setItem('ga_theme',th.value)}catch(e){}};
+ const nm=$('#nm');nm.value=myName();nm.onchange=async()=>{try{localStorage.setItem('ga_name',nm.value.trim())}catch(e){}const t=mine();if(t)db.doc('owners/'+t.id).update({name:nm.value.trim()}).catch(()=>{})};
+ render();
+ if(typeof firebase==='undefined'||!window.FIREBASE_CONFIG||FIREBASE_CONFIG.apiKey==='PASTE_HERE'){toast('Firebase is not set up yet. Fill in firebase-config.js (see README).');return}
+ try{firebase.initializeApp(FIREBASE_CONFIG);D=firebase.firestore();const cr=await firebase.auth().signInAnonymously();uid=cr.user.uid}catch(e){toast('Could not connect: '+esc(e.message));return}
+ setInterval(tick,250);
+ if(/^\d{6}$/.test(location.hash.slice(1)))enter(location.hash.slice(1));else render();
+}
+function enter(code){
+ room=code;try{const h=HIST().filter(x=>x.code!==code);h.unshift({code,ts:Date.now()});localStorage.setItem('ga_hist',JSON.stringify(h.slice(0,20)))}catch(e){}const pre=p=>'rooms/'+room+'/'+p;db={doc:p=>D.doc(pre(p)),collection:p=>D.collection(pre(p))};
+ $('#who').title='Click to copy invite link';$('#who').onclick=()=>{try{navigator.clipboard.writeText(location.href)}catch(e){}$('#who').textContent='Invite link copied'};
+ db.doc('meta/room').onSnapshot(s=>{meta=s.exists?s.data():null;host=!!meta&&meta.hostUid===uid;$('#who').textContent='Room '+room+(host?' · Host':'');render()});
+ const t0=setTimeout(()=>{if(!loaded.c)toast('Still connecting to the party…')},10000);
+ db.doc('cfg/main').onSnapshot(s=>{cfg=s.exists?s.data():null;loaded.c=1;clearTimeout(t0);toast('');render()},e=>toast('Cannot read the party: '+esc(e.message||e.code)));
+ db.doc('live/lot').onSnapshot(s=>{lot=s.exists?s.data():null;render()});
+ db.collection('sold').onSnapshot(q=>{sold={};q.forEach(d=>sold[d.id]=d.data());render()});
+ db.collection('owners').onSnapshot(q=>{owners={};q.forEach(d=>owners[d.id]=d.data());render()});
+}
+let lt='create',pf='t1',pm='mega';
+const MODES={mega:['Mega',25,120],classic:['Classic',11,90],sprint:['Sprint',5,60]};
+const HIST=()=>{try{return JSON.parse(localStorage.getItem('ga_hist')||'[]').filter(h=>/^\d{6}$/.test(h.code))}catch(e){return[]}};
+function landing(v){
+ let b='';
+ if(lt==='create')b=`<div class="mut"><b>FRANCHISE</b> · choose the team you’ll manage</div><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(88px,1fr));margin:8px 0 14px">${SAMPLE.teams.map(t=>`<button class="${pf===t.id?'on':''}" style="border-color:${t.color}" onclick="pf='${t.id}';render(true)"><span class="dot" style="background:${t.color}"></span><br>${t.name}</button>`).join('')}</div><div class="mut"><b>MODE</b></div><div class="grid" style="margin:8px 0 14px">${Object.entries(MODES).map(([k,m])=>`<button class="${pm===k?'on':''}" style="text-align:left" onclick="pm='${k}';render(true)"><b>${m[0]}</b><br><small>${m[1]} players · ₹${m[2]} Cr budget</small></button>`).join('')}</div><button class="pri" onclick="create()">Create room</button>`;
+ else if(lt==='join')b=`<div class="row"><input id="rc" placeholder="6-digit room code" maxlength="6" inputmode="numeric"><button class="pri" onclick="join()">Join room</button></div><p class="mut">Get the code from the host, then pick a free franchise inside.</p>`;
+ else b=HIST().map(h=>`<div class="row sp" style="margin-bottom:8px"><span>Room <b>${h.code}</b> <span class="mut">${new Date(h.ts).toLocaleDateString()}</span></span><button onclick="location.hash='${h.code}';enter('${h.code}')">Open</button></div>`).join('')||'<span class="mut">No rooms played on this device yet.</span>';
+ v.innerHTML=`<div style="text-align:center;padding:18px 0"><h1 style="font-size:clamp(34px,9vw,64px)">AUCTION ROOM</h1><p class="mut">Create room → invite friends with the code → start bidding</p></div><div class="card"><div class="row" style="margin-bottom:14px">${[['create','Create'],['join','Join'],['history','History']].map(t=>`<button class="${lt===t[0]?'on':''}" onclick="lt='${t[0]}';render(true)">${t[1]}</button>`).join('')}</div>${b}</div>`}
+function landingOld(v){v.innerHTML=`<div class="card"><h2 style="margin-top:0">Run your own auction</h2><p class="mut">Create a room, then use Share → Copy link and send it. Everyone who opens that link joins your party. Anyone with a 6-digit code can also join below.</p><button class="pri" onclick="create()">Create room</button></div><div class="card"><b>Join a room</b><div class="row" style="margin-top:8px"><input id="rc" placeholder="6-digit code" maxlength="6" inputmode="numeric"><button onclick="join()">Join</button></div></div>`}
+async function create(){
+ if(!D||!uid)return toast('Still connecting — try again in a moment.');
+ const nm=$('#nm').value.trim();if(!nm)return toast('Enter your name (top right) first.');try{localStorage.setItem('ga_name',nm)}catch(e){}
+ const code=String(Math.floor(100000+Math.random()*900000));enter(code);
+ const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));c.settings.purse=m[2];c.settings.maxSquad=m[1];
+ await db.doc('meta/room').set({hostUid:uid});await db.doc('cfg/main').set(c);await db.doc('owners/'+pf).set({uid,name:nm});location.hash=code;
+}
+function join(){const c=$('#rc').value.trim();if(!/^\d{6}$/.test(c))return toast('Enter a 6-digit code.');toast('');location.hash=c;enter(c)}
+function nav(){
+ const tabs=[['auction','Auction'],['teams','Teams'],['players','Players'],['results','Results']];if(host)tabs.push(['setup','Setup']);
+ $('#nav').innerHTML=tabs.map(t=>`<button class="${tab===t[0]?'on':''}" data-t="${t[0]}">${t[1]}</button>`).join('');
+ $('#nav').onclick=e=>{const t=e.target.dataset.t;if(t){tab=t;render(true)}};
+}
+function render(force){
+ nav();const v=$('#view');
+ if(!room){$('#nav').innerHTML='';landing(v);return}
+ if(tab==='setup'&&!force&&v.dataset.t==='setup')return;
+ v.dataset.t=tab;
+ if(!cfg&&tab!=='setup'){v.innerHTML=`<div class="card"><b>No auction set up yet.</b><p class="mut">${host?'Go to Setup and load the sample or paste your own teams and players.':'Waiting for the host to set things up…'}</p></div>`;return}
+ ({auction:rAuction,teams:rTeams,players:rPlayers,results:rResults,setup:rSetup})[tab](v);
+}
+function rAuction(v){
+ const me=mine(),p=lot&&ply(lot.pid),live=lot&&lot.status==='bidding';
+ let h='';
+ h+=`<div class="card"><div class="row sp"><div>${me?`You are <b style="color:${me.color}">${esc(me.name)}</b> · purse <b>${fmt(left(me.id))}</b> · squad ${squad(me.id).length}/${S().maxSquad}`:'<b>Pick a team</b> in the Teams tab to start bidding.'}</div></div></div>`;
+ if(p){const bt=team(lot.team);
+  h+=`<div class="card"><div class="row sp"><div><span class="tag">${esc(p.role)}</span> <span class="tag">Base ${fmt(p.base)}</span> <span class="tag">OVR ${ovr(p)}</span>
+  <h2 style="margin:6px 0">${esc(p.name)}</h2><a href="#" class="mut" onclick="stats('${p.id}');return false">View past stats</a></div>
+  <div style="text-align:right"><div class="big">${fmt(lot.bid)}</div><div>${bt?`<span class="dot" style="background:${bt.color}"></span> ${esc(bt.name)}`:'<span class="mut">No bids yet</span>'}</div>
+  <div id="tm" class="timer"></div></div></div>
+  <div class="row" style="margin-top:12px">${live?`<button class="pri" onclick="bid()">Bid ${fmt(nextBid())}</button>`:`<b>${lot.status==='done'?(bt?'SOLD to '+esc(bt.name)+' for '+fmt(lot.bid):'UNSOLD'):''}</b>`}
+  ${host&&live?`<button onclick="finish()">Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button>`:''}</div></div>`;
+ } else h+=`<div class="card mut">Waiting for the host to start the first player.</div>`;
+ if(host&&(!live))h+=`<button class="pri" onclick="nextLot()">▶ Start next player (${remaining().length} left)</button>`;
+ const rs=Object.keys(sold).map(k=>({k,...sold[k]})).filter(s=>s.team).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,8);
+ h+=`<div class="card"><b>Recent signings</b>${rs.map(s=>{const t=team(s.team),p=ply(s.k);return p&&t?`<div class="row sp"><span><span class="dot" style="background:${t.color}"></span> ${esc(t.name)} signed ${esc(p.name)}</span><b>${fmt(s.price)}</b></div>`:''}).join('')||'<div class="mut">Nothing yet</div>'}</div>`;
+ v.innerHTML=h;tick();
+}
+const remaining=()=>cfg?cfg.players.filter(p=>!sold[p.id]):[];
+function nextBid(){return lot.team?+(lot.bid+S().inc).toFixed(2):lot.bid}
+async function bid(){
+ const me=mine();if(!me)return toast('Pick a team in the Teams tab first.');
+ if(!lot||lot.status!=='bidding'||Date.now()>lot.endsAt)return;
+ if(lot.team===me.id)return;
+ const b=nextBid();if(b>left(me.id))return toast('Not enough purse.');
+ if(squad(me.id).length>=S().maxSquad)return toast('Your squad is full.');
+ toast('');
+ try{await db.doc('live/lot').update({bid:b,team:me.id,endsAt:Math.max(lot.endsAt,Date.now()+S().reset*1000)})}catch(e){toast('Bid failed — check your connection.')}
+}
+async function nextLot(){
+ const r=remaining();if(!r.length)return toast('All players are done.');
+ const p=r[0];
+ await db.doc('live/lot').set({pid:p.id,bid:p.base,team:null,status:'bidding',endsAt:Date.now()+S().timer*1000});
+}
+async function finish(unsold){
+ if(!lot||lot.status!=='bidding')return;
+ const l=lot,key=l.pid+l.bid+l.endsAt;if(fin===key&&!unsold)return;fin=key;
+ const t=unsold?null:l.team;
+ await db.doc('sold/'+l.pid).set({team:t,price:t?l.bid:0,at:Date.now()});
+ await db.doc('live/lot').set({...l,team:t,status:'done'});
+}
+function tick(){
+ const el=$('#tm');if(!el||!lot)return;
+ if(lot.status!=='bidding'){el.textContent='';return}
+ const s=Math.max(0,Math.ceil((lot.endsAt-Date.now())/1000));
+ el.textContent=s+'s';el.className='timer'+(s<=5?' lowt':'');
+ if(s===0&&Date.now()>lot.endsAt+600)finish();
+}
+function rTeams(v){
+ const me=mine();
+ v.innerHTML='<div class="grid">'+cfg.teams.map(t=>{const o=owners[t.id],sq=squad(t.id);
+  return `<div class="card" style="border-top:4px solid ${t.color}"><div class="row sp"><b>${esc(t.name)}</b>${o?`<span class="tag">${esc(o.name||'Player')}</span>`:''}</div>
+  <div class="mut">Purse ${fmt(left(t.id))} · ${sq.length}/${S().maxSquad}</div>
+  <div style="margin:8px 0">${sq.map(s=>{const p=ply(Object.keys(sold).find(k=>sold[k]===s));return p?`<div class="row sp pl" onclick="stats('${p.id}')"><span>${esc(p.name)} <span class="tag">${esc(p.role)}</span></span><span>${fmt(s.price)}</span></div>`:''}).join('')||'<span class="mut">No players yet</span>'}</div>
+  ${!o&&!me?`<button class="pri" onclick="claim('${t.id}')">Join this team</button>`:''}
+  ${o&&o.uid===uid?`<button class="warn" onclick="release('${t.id}')">Leave</button>`:''}
+  ${host&&o&&o.uid!==uid?`<button class="warn" onclick="release('${t.id}')">Remove owner</button>`:''}</div>`}).join('')+'</div>';
+}
+async function claim(id){
+ if(!uid)return toast('Sign in to join a team.');
+ const r=db.doc('owners/'+id),s=await r.get();
+ if(s.exists)return toast('Someone just took that team.');
+ await r.set({uid,name:myName()||'Player'});
+}
+const release=id=>db.doc('owners/'+id).delete();
+function rPlayers(v){
+ v.innerHTML=`<div class="card wrap"><table><tr><th>Player</th><th>Role</th><th>Base</th><th>OVR</th><th>Matches</th><th>Runs</th><th>Wkts</th><th>Status</th></tr>`+cfg.players.map(p=>{const c=career(p),s=sold[p.id],t=s&&team(s.team);
+  return `<tr class="pl" onclick="stats('${p.id}')"><td><b>${esc(p.name)}</b></td><td>${esc(p.role)}</td><td>${fmt(p.base)}</td><td><b>${ovr(p)}</b></td><td>${c.m}</td><td>${c.r}</td><td>${c.w}</td><td>${s?(t?`<span class="dot" style="background:${t.color}"></span> ${esc(t.name)} ${fmt(s.price)}`:'Unsold'):'<span class="mut">Pending</span>'}</td></tr>`}).join('')+'</table></div>';
+}
+function career(p){const st=p.stats||[];const m=st.reduce((a,s)=>a+(+s.m||0),0),r=st.reduce((a,s)=>a+(+s.r||0),0),w=st.reduce((a,s)=>a+(+s.w||0),0);return{m,r,w,avg:m?(r/m).toFixed(1):'-'}}
+function stats(id){
+ const p=ply(id);if(!p)return;const c=career(p);
+ $('#modal').innerHTML=`<div class="modal" onclick="if(event.target===this)this.remove()"><div><div class="row sp"><h2 style="margin:0">${esc(p.name)}</h2><button onclick="this.closest('.modal').remove()">✕</button></div>
+ <p class="mut"><span class="tag">${esc(p.role)}</span> Base ${fmt(p.base)} · <b>OVR ${ovr(p)}</b> · ${c.m} matches · ${c.r} runs · ${c.w} wickets · ${c.avg} runs/match</p>
+ <div class="wrap"><table><tr><th>Season</th><th>Mat</th><th>Runs</th><th>SR</th><th>Wkts</th><th>Econ</th></tr>${(p.stats||[]).map(s=>`<tr><td>${esc(s.y)}</td><td>${esc(s.m)}</td><td>${esc(s.r)}</td><td>${esc(s.sr)}</td><td>${esc(s.w)}</td><td>${esc(s.e)}</td></tr>`).join('')||'<tr><td colspan="6" class="mut">No past data</td></tr>'}</table></div></div></div>`;
+}
+function rSetup(v){
+ v.innerHTML=`<div class="card"><b>Everything is editable here.</b> <span class="mut">Edit the JSON (settings, teams, players with per-season stats), then save. Only the host sees this tab.</span>
+ <textarea id="js" spellcheck="false">${esc(JSON.stringify(cfg||SAMPLE,null,1))}</textarea>
+ <div class="row" style="margin-top:8px"><button class="pri" onclick="saveCfg()">Save setup</button><button onclick="$('#js').value=JSON.stringify(SAMPLE,null,1)">Fill sample</button></div></div>
+ <div class="card"><b>Import players (CSV)</b><div class="mut">One per line: name, role (BAT/BOWL/AR/WK), base, matches, runs, strike rate, wickets, economy</div>
+ <textarea id="csv" style="min-height:90px" placeholder="Rahul, BAT, 1.5, 24, 610, 135, 0, 0"></textarea>
+ <div class="row" style="margin-top:8px"><button onclick="importCsv()">Add to setup</button></div></div>
+ <div class="card"><b>Danger zone</b><div class="row" style="margin-top:8px"><button class="warn" onclick="resetAuction()">Reset auction (keeps setup)</button></div></div>`;
+}
+function importCsv(){
+ try{const c=JSON.parse($('#js').value);
+ $('#csv').value.split('\n').filter(l=>l.trim()).forEach((l,i)=>{const a=l.split(',').map(x=>x.trim());
+  c.players.push({id:'p'+Date.now().toString(36)+i,name:a[0],role:(a[1]||'BAT').toUpperCase(),base:+a[2]||0.5,stats:[{y:'Career',m:+a[3]||0,r:+a[4]||0,sr:+a[5]||0,w:+a[6]||0,e:+a[7]||0}]})});
+ $('#js').value=JSON.stringify(c,null,1);$('#csv').value=''}catch(e){toast('Fix the JSON first: '+esc(e.message))}
+}
+async function saveCfg(){
+ try{const c=JSON.parse($('#js').value);if(!c.settings||!c.teams||!c.players)throw new Error('Needs settings, teams and players');
+ await db.doc('cfg/main').set(c);toast('');alert('Saved')}catch(e){toast('Could not save: '+esc(e.message))}
+}
+async function resetAuction(){
+ if(!confirm('Clear all sold players and the current lot?'))return;
+ for(const k of Object.keys(sold))await db.doc('sold/'+k).delete();
+ await db.doc('live/lot').delete();
+}
+function ovr(p){const st=p.stats||[],n=st.length||1,c=career(p),m=c.m||1,sr=st.reduce((a,s)=>a+(+s.sr||0),0)/n,e=st.reduce((a,s)=>a+(+s.e||0),0)/n;
+ const bat=55+c.r/m*.35+(sr-120)*.3,bowl=55+c.w/m*14-(e-8)*3;
+ const v=p.role==='BOWL'?bowl:p.role==='AR'?(bat+bowl)/2+4:bat;return Math.max(50,Math.min(99,Math.round(v)))}
+function xi(id){
+ const s=Object.keys(sold).filter(k=>sold[k].team===id).map(ply).filter(Boolean).sort((a,b)=>ovr(b)-ovr(a));
+ const x=[],wk=s.find(p=>p.role==='WK');if(wk)x.push(wk);s.forEach(p=>{if(x.length<Math.min(11,S().maxSquad)&&!x.includes(p))x.push(p)});
+ const bw=p=>p.role==='BOWL'||p.role==='AR';
+ while(x.filter(bw).length<Math.min(4,Math.floor(S().maxSquad/3))){const o=s.find(p=>bw(p)&&!x.includes(p)),w=[...x].reverse().find(p=>!bw(p)&&p!==wk);if(!o||!w)break;x[x.indexOf(w)]=o}
+ return x}
+function rResults(v){
+ const rows=cfg.teams.map(t=>{const x=xi(t.id);return{t,x,tot:x.reduce((a,p)=>a+ovr(p),0)}}).sort((a,b)=>b.tot-a.tot);
+ v.innerHTML='<div class="card mut">Each team’s best Playing XI (with a keeper and bowling cover) ranked by total OVR. Highest total wins.</div>'+rows.map((r,i)=>`<div class="card" style="border-left:5px solid ${r.t.color}"><div class="row sp"><b>${i===0&&r.x.length?'🏆 ':''}${i+1}. ${esc(r.t.name)}${owners[r.t.id]?' · '+esc(owners[r.t.id].name||''):''}</b><b>${r.tot} pts${r.x.length<Math.min(11,S().maxSquad)?' <span class="tag">XI incomplete</span>':''}</b></div><div class="mut">${r.x.map(p=>esc(p.name)+' '+ovr(p)).join(' · ')||'No players yet'}</div></div>`).join('')}
+init();
+</script></body></html>
