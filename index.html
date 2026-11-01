@@ -133,6 +133,24 @@ body.teams-mode main{max-width:1500px}
 .pset table{table-layout:fixed;min-width:720px}
 .pset td{overflow:hidden;text-overflow:ellipsis}
 .pset th:nth-child(1){width:24%}.pset th:nth-child(2){width:8%}.pset th:nth-child(3){width:10%}.pset th:nth-child(4){width:7%}.pset th:nth-child(5){width:14%}.pset th:nth-child(6){width:6%}.pset th:nth-child(7){width:7%}.pset th:nth-child(8){width:7%}.pset th:nth-child(9){width:17%}
+/* Landing: big franchise tiles */
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,190px),1fr));gap:12px;margin:10px 0 18px}
+.ftile{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 12px 14px;border-radius:18px;border:1.5px solid var(--line);white-space:normal;text-align:center;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--team) 16%,var(--card)),var(--card) 75%);transition:transform .15s,box-shadow .15s,border-color .15s}
+.ftile::before{content:'';position:absolute;inset:0 0 auto 0;height:5px;background:var(--team)}
+.ftile:hover{transform:translateY(-3px);border-color:var(--team);box-shadow:0 10px 24px color-mix(in srgb,var(--team) 35%,transparent)}
+.ftile.on{color:var(--ink);font-weight:400;border-color:var(--team);transform:translateY(-3px);background:linear-gradient(180deg,color-mix(in srgb,var(--team) 32%,var(--card)),color-mix(in srgb,var(--team) 8%,var(--card)));box-shadow:0 0 0 2px var(--team),0 12px 30px color-mix(in srgb,var(--team) 45%,transparent)}
+.ftile-ck{position:absolute;top:12px;right:10px;font-size:10px;font-weight:800;letter-spacing:1px;background:var(--team);color:#fff;border-radius:99px;padding:2px 8px}
+.ftile-logo{height:106px;display:grid;place-items:center;margin-top:6px}
+.tlogo{object-fit:contain;filter:drop-shadow(0 4px 10px #0006)}
+.ftile-code{font:900 24px/1 "Courier New",ui-monospace,monospace;letter-spacing:2px}
+.ftile-name{font-weight:700;font-size:13px}
+.ftile-meta{font-size:11px;color:var(--mut)}
+.ftile-chips{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.ftile-top{font-size:11px;color:var(--mut);margin-top:4px}
+.crest{position:relative;width:var(--s);height:calc(var(--s)*1.1);clip-path:polygon(50% 0,100% 12%,100% 62%,50% 100%,0 62%,0 12%);background:#ffffffd9}
+.crest-in{position:absolute;inset:4px;clip-path:polygon(50% 0,100% 12%,100% 62%,50% 100%,0 62%,0 12%);background:linear-gradient(160deg,var(--team),color-mix(in srgb,var(--team) 40%,#000));display:grid;place-items:center}
+@media(max-width:560px){.fgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.ftile{padding:12px 6px}.ftile-logo{height:96px}.ftile-name{font-size:12px}.ftile-meta{display:none}}
+.crest-in span{font-family:"Courier New",ui-monospace,monospace;font-weight:900;font-size:calc(var(--s)*.27);color:#fff;text-shadow:0 2px 4px #0008;margin-top:-6%}
 </style></head><body>
 <header><h1>GULLY <span>AUCTION</span></h1>
 <div class="row"><input id="nm" placeholder="Your name" size="12"><select id="th" title="Theme"><option value="">Auto</option><option value="scoreboard">Scoreboard</option><option value="pavilion">Pavilion</option><option value="floodlight">Floodlight</option></select><span id="who" class="tag"></span><button id="gear" title="Host settings" style="display:none" onclick="tab='setup';render(true)">⚙</button></div></header>
@@ -260,9 +278,21 @@ let lastS=-1,seen=false,AC=null,muted=false,autoNextKey='';try{muted=localStorag
 let lt='create',pf='t1',pm='mega';
 const MODES={mega:['Mega',25,120],classic:['Classic',11,120],sprint:['Sprint',7,120]};
 const HIST=()=>{try{return JSON.parse(localStorage.getItem('ga_hist')||'[]').filter(h=>/^\d{6}$/.test(h.code))}catch(e){return[]}};
+const TEAM_INFO={CSK:['Chennai Super Kings','Chennai','M. A. Chidambaram Stadium'],MI:['Mumbai Indians','Mumbai','Wankhede Stadium'],RCB:['Royal Challengers Bengaluru','Bengaluru','M. Chinnaswamy Stadium'],KKR:['Kolkata Knight Riders','Kolkata','Eden Gardens'],DC:['Delhi Capitals','Delhi','Arun Jaitley Stadium'],RR:['Rajasthan Royals','Jaipur','Sawai Mansingh Stadium'],PBKS:['Punjab Kings','Mullanpur','PCA New Intl Stadium'],SRH:['Sunrisers Hyderabad','Hyderabad','Rajiv Gandhi Intl Stadium'],LSG:['Lucknow Super Giants','Lucknow','Ekana Stadium'],GT:['Gujarat Titans','Ahmedabad','Narendra Modi Stadium']};
+// Logos are read from logos/<CODE>.png (then .svg/.webp/.jpg); if none exist a crest in the team colours is drawn instead
+const LOGO_EXT=['png','svg','webp','jpg'];
+function crest(color,abbr,size){return `<div class="crest" style="--team:${color};--s:${size}px"><div class="crest-in"><span>${esc(abbr)}</span></div></div>`}
+function teamLogo(t,size){const a=paddleCode(t);return `<img class="tlogo" style="width:${size}px;height:${size}px" src="logos/${esc(a)}.png" alt="${esc(t.name)}" data-a="${esc(a)}" data-i="0" data-c="${esc(t.color)}" data-s="${size}" onerror="logoFail(this)">`}
+function logoFail(img){const i=+img.dataset.i+1;if(i<LOGO_EXT.length){img.dataset.i=i;img.src='logos/'+img.dataset.a+'.'+LOGO_EXT[i];return}
+ const d=document.createElement('div');d.innerHTML=crest(img.dataset.c,img.dataset.a,+img.dataset.s);img.replaceWith(d.firstChild)}
+function retStat(id){const R=(window.IPL2025_RETENTIONS||[]).filter(r=>r.team===id);if(!R.length)return null;
+ const adj=(window.IPL2025_RETENTION_ADJUSTMENTS||{})[id]||0,spent=R.reduce((a,r)=>a+r.price,0)+adj;
+ return{n:R.length,purse:+(120-spent).toFixed(2),top:R.slice().sort((a,b)=>b.price-a.price).slice(0,3).map(r=>{const w=r.name.split(' '),f=w[0],l=w[w.length-1];return w.length<2?r.name:(/^[A-Z]{2,3}$/.test(f)?f:f[0]+'.')+' '+l})}}
+function ftile(t){const a=paddleCode(t),i=TEAM_INFO[a]||[t.name,'',''],r=retStat(t.id),on=pf===t.id;
+ return `<button class="ftile ${on?'on':''}" style="--team:${t.color}" onclick="pf='${t.id}';render(true)">${on?'<span class="ftile-ck">✓ SELECTED</span>':''}<div class="ftile-logo">${teamLogo(t,92)}</div><div class="ftile-code">${esc(a)}</div><div class="ftile-name">${esc(i[0])}</div><div class="ftile-meta">${esc(i[1])}${i[2]?' · '+esc(i[2]):''}</div>${r?`<div class="ftile-chips"><span class="tag">${r.n} retained</span><span class="tag">₹${r.purse} Cr purse</span></div><div class="ftile-top">${esc(r.top.join(' · '))}</div>`:''}</button>`}
 function landing(v){
  let b='';
- if(lt==='create')b=`<div class="mut"><b>FRANCHISE</b> · choose the team you’ll manage</div><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(88px,1fr));margin:8px 0 14px">${SAMPLE.teams.map(t=>`<button class="${pf===t.id?'on':''}" style="border-color:${t.color}" onclick="pf='${t.id}';render(true)"><span class="dot" style="background:${t.color}"></span><br>${t.name}</button>`).join('')}</div><div class="mut"><b>MODE</b></div><div class="grid" style="margin:8px 0 14px">${Object.entries(MODES).map(([k,m])=>`<button class="${pm===k?'on':''}" style="text-align:left" onclick="pm='${k}';render(true)"><b>${m[0]}</b><br><small>${Math.max(m[1],7)} squad slots · ₹120 Cr budget</small></button>`).join('')}</div><button class="pri" onclick="create()">Create room</button>`;
+ if(lt==='create')b=`<div class="mut"><b>FRANCHISE</b> · choose the team you’ll manage</div><div class="fgrid">${SAMPLE.teams.map(ftile).join('')}</div><div class="mut" style="font-size:11px;margin:-6px 0 14px">Tip: put team logos in a <b>logos/</b> folder named like CSK.png, MI.png, RCB.png … Teams without a file show a crest.</div><div class="mut"><b>MODE</b></div><div class="grid" style="margin:8px 0 14px">${Object.entries(MODES).map(([k,m])=>`<button class="${pm===k?'on':''}" style="text-align:left" onclick="pm='${k}';render(true)"><b>${m[0]}</b><br><small>${Math.max(m[1],7)} squad slots · ₹120 Cr budget</small></button>`).join('')}</div><button class="pri" onclick="create()">Create room</button>`;
  else if(lt==='join')b=`<div class="row"><input id="rc" placeholder="6-digit room code" maxlength="6" inputmode="numeric"><button class="pri" onclick="join()">Join room</button></div><p class="mut">Get the code from the host, then pick a free franchise inside.</p>`;
  else b=HIST().map(h=>`<div class="row sp" style="margin-bottom:8px"><span>Room <b>${h.code}</b> <span class="mut">${new Date(h.ts).toLocaleDateString()}</span></span><button onclick="location.hash='${h.code}';enter('${h.code}')">Open</button></div>`).join('')||'<span class="mut">No rooms played on this device yet.</span>';
  v.innerHTML=`<div style="text-align:center;padding:18px 0"><h1 style="font-size:clamp(34px,9vw,64px)">AUCTION ROOM</h1><p class="mut">Create room → invite friends with the code → start bidding</p></div><div class="card"><div class="row" style="margin-bottom:14px">${[['create','Create'],['join','Join'],['history','History']].map(t=>`<button class="${lt===t[0]?'on':''}" onclick="lt='${t[0]}';render(true)">${t[1]}</button>`).join('')}</div>${b}</div>`}
