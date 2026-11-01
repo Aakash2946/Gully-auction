@@ -120,6 +120,19 @@ body.teams-mode main{max-width:1500px}
 .prow-p{font:800 14px "Courier New",ui-monospace,monospace;color:var(--acc2);white-space:nowrap}
 .tcard-a{margin-top:14px}
 @media(max-width:560px){.rsec{min-height:0}.rgrid{grid-template-columns:1fr}.tstats{grid-template-columns:repeat(2,1fr)}.tcard-name{font-size:22px}}
+/* Players tab: one collapsible table per set */
+.pset{padding:0;overflow:hidden}
+.pset>summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px}
+.pset>summary::-webkit-details-marker{display:none}
+.pset-t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pset-t::before{content:'▸';color:var(--acc);display:inline-block;transition:transform .15s}
+.pset[open]>summary .pset-t::before{transform:rotate(90deg)}
+.pset-t b{font:900 18px "Courier New",ui-monospace,monospace;color:var(--acc)}
+.pset .wrap{padding:0 14px 12px;border-top:1px solid var(--line)}
+.tag.live{color:var(--bad);border-color:var(--bad)}
+.pset table{table-layout:fixed;min-width:720px}
+.pset td{overflow:hidden;text-overflow:ellipsis}
+.pset th:nth-child(1){width:24%}.pset th:nth-child(2){width:8%}.pset th:nth-child(3){width:10%}.pset th:nth-child(4){width:7%}.pset th:nth-child(5){width:14%}.pset th:nth-child(6){width:6%}.pset th:nth-child(7){width:7%}.pset th:nth-child(8){width:7%}.pset th:nth-child(9){width:17%}
 </style></head><body>
 <header><h1>GULLY <span>AUCTION</span></h1>
 <div class="row"><input id="nm" placeholder="Your name" size="12"><select id="th" title="Theme"><option value="">Auto</option><option value="scoreboard">Scoreboard</option><option value="pavilion">Pavilion</option><option value="floodlight">Floodlight</option></select><span id="who" class="tag"></span><button id="gear" title="Host settings" style="display:none" onclick="tab='setup';render(true)">⚙</button></div></header>
@@ -402,9 +415,32 @@ async function claim(id){
  await r.set({uid,name:myName()||'Player'});
 }
 const release=id=>db.doc('owners/'+id).delete();
+const setOpen={};
+const SET_ROLE=['Batters','Bowlers','All-rounders','Wicketkeepers','Others'];
+function setLabel(name,m){
+ if(m.marquee)return 'Marquee';
+ const f=/^u?fa\d*$/i.test(name)?'Fast bowlers':/^u?sp\d*$/i.test(name)?'Spinners':SET_ROLE[m.rr];
+ return (m.capped?'Capped ':'Uncapped ')+f;
+}
+function toggleAllSets(open){(cfg.players||[]).forEach(p=>{setOpen[auctionSetName(p)]=open});setOpen['__retained']=open;render(true)}
 function rPlayers(v){
- v.innerHTML=`<div class="card wrap"><table><tr><th>Player</th><th>Role</th><th>Base</th><th>OVR</th><th>Country</th><th>Age</th><th>IPL</th><th>T20I</th><th>Status</th></tr>`+cfg.players.map(p=>{const c=career(p),s=sold[p.id],t=s&&team(s.team);
-  return `<tr class="pl" onclick="stats('${p.id}')"><td><b>${esc(p.name)}</b></td><td>${esc(p.role)}</td><td>${fmt(p.base)}</td><td><b>${ovr(p)}</b></td><td>${esc(p.country||'')}</td><td>${p.age||''}</td><td>${(p.caps||{}).ipl||0}</td><td>${(p.caps||{}).t20||0}</td><td>${s?(t?`<span class="dot" style="background:${t.color}"></span> ${esc(t.name)} ${fmt(s.price)}`:'Unsold'):'<span class="mut">Pending</span>'}</td></tr>`}).join('')+'</table></div>';
+ const pool=cfg.players.filter(p=>!p.retained),ret=cfg.players.filter(p=>p.retained);
+ const sets=buildAuctionOrder(pool).sets;
+ const byId=new Map(pool.map(p=>[p.id,p]));
+ const liveId=lot&&lot.status==='bidding'?lot.pid:null;
+ const head='<tr><th>Player</th><th>Role</th><th>Base</th><th>OVR</th><th>Country</th><th>Age</th><th>IPL</th><th>T20I</th><th>Status</th></tr>';
+ const row=p=>{const s=sold[p.id],t=s&&team(s.team);
+  const st=liveId===p.id?'<span class="tag live">● LIVE</span>':s?(t?`<span class="dot" style="background:${t.color}"></span> ${esc(t.name)} ${fmt(s.price)}`:'Unsold'):'<span class="mut">Pending</span>';
+  return `<tr class="pl" onclick="stats('${p.id}')"><td><b>${esc(p.name)}</b></td><td>${esc(p.role)}</td><td>${fmt(p.base)}</td><td><b>${ovr(p)}</b></td><td>${esc(p.country||'')}</td><td>${p.age||''}</td><td>${(p.caps||{}).ipl||0}</td><td>${(p.caps||{}).t20||0}</td><td>${st}</td></tr>`};
+ const byOvr=(a,b)=>ovr(b)-ovr(a)||String(a.name).localeCompare(b.name);
+ const sec=(key,title,label,list)=>{
+  const done=list.filter(p=>sold[p.id]).length,live=list.some(p=>p.id===liveId);
+  return `<details class="pset card" data-s="${esc(key)}" ontoggle="setOpen[this.dataset.s]=this.open" ${setOpen[key]!==false?'open':''}><summary><span class="pset-t"><b>${esc(title)}</b><span class="tag">${esc(label)}</span>${live?'<span class="tag live">● LIVE NOW</span>':''}</span><span class="mut">${done}/${list.length} done</span></summary><div class="wrap"><table>${head}${list.slice().sort(byOvr).map(row).join('')}</table></div></details>`};
+ const all=cfg.players,nSold=all.filter(p=>sold[p.id]&&sold[p.id].team).length,nUns=all.filter(p=>sold[p.id]&&!sold[p.id].team).length;
+ let h=`<div class="card row sp"><span class="mut">${sets.length} sets · ${all.length} players · ${nSold} sold · ${nUns} unsold · ${all.length-nSold-nUns} pending</span><span class="row"><button onclick="toggleAllSets(true)">Expand all</button><button onclick="toggleAllSets(false)">Collapse all</button></span></div>`;
+ sets.forEach(st=>{const list=st.ids.map(id=>byId.get(id)).filter(Boolean);h+=sec(st.name,st.name,setLabel(st.name,setMeta(st.name,list)),list)});
+ if(ret.length)h+=sec('__retained','Retained','IPL 2025 retentions',ret);
+ v.innerHTML=h;
 }
 function capsModal(p){const k=p.caps;
  $('#modal').innerHTML=`<div class="modal" onclick="if(event.target===this)this.remove()"><div><div class="row sp"><h2 style="margin:0">${esc(p.name)}</h2><button onclick="this.closest('.modal').remove()">✕</button></div>
