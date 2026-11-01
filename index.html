@@ -116,6 +116,40 @@ SAMPLE.players=Array.from({length:200},(_,i)=>{const r=RL[i%10],b=r==='BOWL',w=r
 let db,D,room='',meta=null,uid=null,host=false,cfg=null,lot=null,sold={},owners={},tab='auction',fin='',loaded={c:0};
 const S=()=>cfg&&cfg.settings||SAMPLE.settings;
 const ply=id=>cfg&&cfg.players.find(p=>p.id===id);
+function auctionSetName(p){
+ const explicit=String(p.auctionSet||p.set||'').trim();
+ if(explicit)return explicit;
+ const role=String(p.role||'OTHER').toUpperCase();
+ const roleName=({BAT:'Batters',AR:'All-rounders',WK:'Wicketkeepers',BOWL:'Bowlers'})[role]||'Other players';
+ const caps=p.caps||{};
+ const hasCaps=Object.values(caps).some(v=>Number(v)>0);
+ const isCapped=p.capped===true||hasCaps||Number(p.iplMatches||p.ipl||0)>0;
+ return (isCapped?'Capped ':'Uncapped ')+roleName;
+}
+function shuffled(list){
+ const a=[...list];
+ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
+ return a;
+}
+function buildAuctionOrder(players){
+ const groups=new Map();
+ (players||[]).forEach(p=>{
+  const name=auctionSetName(p);
+  if(!groups.has(name))groups.set(name,[]);
+  groups.get(name).push(p.id);
+ });
+ const roleOrder=['Capped Batters','Capped All-rounders','Capped Wicketkeepers','Capped Bowlers',
+  'Uncapped Batters','Uncapped All-rounders','Uncapped Wicketkeepers','Uncapped Bowlers','Other players'];
+ const names=[...groups.keys()].sort((a,b)=>{
+  const ai=roleOrder.indexOf(a),bi=roleOrder.indexOf(b);
+  if(ai<0&&bi<0)return a.localeCompare(b);
+  if(ai<0)return 1;if(bi<0)return -1;return ai-bi;
+ });
+ const order=[];
+ names.forEach(name=>shuffled(groups.get(name)).forEach(id=>order.push(id)));
+ return {order,sets:names.map(name=>({name,ids:groups.get(name)}))};
+}
+
 const team=id=>cfg&&cfg.teams.find(t=>t.id===id);
 const mine=()=>cfg&&cfg.teams.find(t=>owners[t.id]&&owners[t.id].uid===uid);
 const paddleCode=t=>{if(!t)return'BID';const n=String(t.name||'').trim().toUpperCase();const known={CSK:'CSK',MI:'MI',RCB:'RCB',KKR:'KKR',DC:'DC',RR:'RR',PBKS:'PBKS',SRH:'SRH',LSG:'LSG',GT:'GT'};return known[n]||n.split(/\s+/).map(w=>w[0]).join('').slice(0,4)||'BID'};
@@ -166,7 +200,7 @@ async function create(){
  if(!D||!uid)return toast('Still connecting — try again in a moment.');
  const nm=$('#nm').value.trim();if(!nm)return toast('Enter your name (top right) first.');try{localStorage.setItem('ga_name',nm)}catch(e){}
  const code=String(Math.floor(100000+Math.random()*900000));enter(code);
- const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));c.settings.purse=m[2];c.settings.maxSquad=m[1];c.settings.maxOverseas=8;if(window.PLAYERS)c.players=window.PLAYERS;
+ const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));c.settings.purse=m[2];c.settings.maxSquad=m[1];c.settings.maxOverseas=8;if(window.PLAYERS)c.players=window.PLAYERS;const auctionPlan=buildAuctionOrder(c.players);c.auctionOrder=auctionPlan.order;c.auctionSets=auctionPlan.sets;
  await db.doc('meta/room').set({hostUid:uid});await db.doc('cfg/main').set(c);await db.doc('owners/'+pf).set({uid,name:nm});location.hash=code;
 }
 function join(){const c=$('#rc').value.trim();if(!/^\d{6}$/.test(c))return toast('Enter a 6-digit code.');toast('');location.hash=c;enter(c)}
@@ -195,7 +229,7 @@ function rAuction(v){
  const recent=Object.entries(sold).map(([id,s])=>({id,...s,p:ply(id),t:team(s.team)})).filter(x=>x.p&&x.t).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,6);
  const teams=cfg?cfg.teams.map(t=>{const picks=teamPicks(t.id),o=owners[t.id],isMine=me&&me.id===t.id,isLead=lot&&lot.team===t.id;return `<div class="team-mini ${isMine?'mine-team':''} ${isLead?'leading-team':''}" style="--team:${t.color}"><div class="team-mini-head"><span class="team-mini-name"><span class="dot" style="background:${t.color}"></span>${esc(t.name)} ${isMine?'<span class="tag">YOU</span>':''} ${isLead?'<span class="tag">LEADING</span>':''}</span><span class="team-mini-purse">${fmt(left(t.id))}</span></div><div class="team-mini-meta"><span class="tag">${esc(o&&o.name||'Unclaimed')}</span><span class="tag">${picks.length}/${S().maxSquad} players</span><span class="tag">✈ ${overseasCount(t.id)}/${overseasLimit()}</span></div><div class="team-mini-picks">${picks.length?'<b>Latest picks:</b> '+picks.slice(0,3).map(x=>esc(x.p.name)+' ('+fmt(x.price)+')').join(' · '):'No players bought yet'}</div></div>`}).join(''):'';
  h+=`<div class="auction-shell"><section class="auction-main"><div class="card auction-topline"><div class="auction-status">${me?`<b style="color:${me.color}">${esc(me.name)}</b><span class="mut">· Purse</span><b>${fmt(left(me.id))}</b><span class="tag">Squad ${squad(me.id).length}/${S().maxSquad}</span><span class="tag">✈ Overseas ${myOverseas}/${overseasLimit()}</span>`:'<b>Choose your franchise in the Teams tab to bid.</b>'}</div><button id="mu" onclick="toggleMute()" style="padding:7px 12px">${muted?'🔇':'🔊'} Sound</button></div>`;
- if(p){const k=p.caps||{};h+=`<div class="card auction-player"><div>${avatar(p)}</div><div class="auction-player-info"><div><div class="row"><span class="tag">${esc(p.role)}</span>${p.country?`<span class="tag">${esc(p.country)}</span>`:''}<span class="tag">${overseas?'✈ OVERSEAS':(p.country?'DOMESTIC':'COUNTRY NOT SET')}</span>${p.set?`<span class="tag">Set ${esc(p.set)}</span>`:''}<span class="tag">OVR ${ovr(p)}</span></div><h2 class="pn">${esc(p.name)}</h2><div class="auction-stats">${[['IPL',k.ipl],['T20I',k.t20],['ODI',k.odi],['TEST',k.test]].map(a=>`<div><small>${a[0]}</small><b>${a[1]||0}</b></div>`).join('')}</div></div><div><div class="auction-bidbar"><div><small class="mut">BASE PRICE · CURRENT BID</small><div class="auction-current-bid">${fmt(lot.bid)}</div><div>${currentTeam?`<span class="dot" style="background:${currentTeam.color}"></span> <b>${esc(currentTeam.name)}</b> is leading`:'<span class="mut">No bids yet</span>'}</div></div><div><small class="mut">TIME LEFT</small><div id="tm" class="auction-timer timer"></div></div></div>${blocked?`<div class="limit-warning">Overseas limit reached. Your team cannot bid on another overseas player.</div>`:''}${me&&nextBid()>left(me.id)?'<div class="limit-warning">Your remaining purse is too low for the next bid.</div>':''}${me&&squad(me.id).length>=S().maxSquad?'<div class="limit-warning">Your squad is full.</div>':''}</div></div></div>
+ if(p){const k=p.caps||{};h+=`<div class="card auction-player"><div>${avatar(p)}</div><div class="auction-player-info"><div><div class="row"><span class="tag">${esc(p.role)}</span>${p.country?`<span class="tag">${esc(p.country)}</span>`:''}<span class="tag">${overseas?'✈ OVERSEAS':(p.country?'DOMESTIC':'COUNTRY NOT SET')}</span>${p.set?`<span class="tag">Set ${esc(p.set)}</span>`:''}<span class="tag">OVR ${ovr(p)}</span><span class="tag">${esc(auctionSetName(p))}</span></div><h2 class="pn">${esc(p.name)}</h2><div class="auction-stats">${[['IPL',k.ipl],['T20I',k.t20],['ODI',k.odi],['TEST',k.test]].map(a=>`<div><small>${a[0]}</small><b>${a[1]||0}</b></div>`).join('')}</div></div><div><div class="auction-bidbar"><div><small class="mut">BASE PRICE · CURRENT BID</small><div class="auction-current-bid">${fmt(lot.bid)}</div><div>${currentTeam?`<span class="dot" style="background:${currentTeam.color}"></span> <b>${esc(currentTeam.name)}</b> is leading`:'<span class="mut">No bids yet</span>'}</div></div><div><small class="mut">TIME LEFT</small><div id="tm" class="auction-timer timer"></div></div></div>${blocked?`<div class="limit-warning">Overseas limit reached. Your team cannot bid on another overseas player.</div>`:''}${me&&nextBid()>left(me.id)?'<div class="limit-warning">Your remaining purse is too low for the next bid.</div>':''}${me&&squad(me.id).length>=S().maxSquad?'<div class="limit-warning">Your squad is full.</div>':''}</div></div></div>
  <div class="auction-actions">${live?`<button class="bid-hero" style="--paddle-color:${me?me.color:'var(--acc)'}" onclick="bid()" ${canBid?'':'disabled'}><span class="paddle-mark">${me?esc(paddleCode(me)):'BID'}</span><span class="paddle-action">${me?(lot.team===me.id?'YOU ARE LEADING':`BID ${fmt(nextBid())}`):'JOIN A TEAM'}</span><span class="paddle-sub">${me?esc(me.name)+' PADDLE':'SELECT YOUR FRANCHISE'}</span></button>`:`<div class="card" style="flex:1;margin:0"><b>${lot.status==='done'?(currentTeam?'SOLD TO '+esc(currentTeam.name)+' FOR '+fmt(lot.bid):'UNSOLD'):'Auction ready'}</b><div class="mut" style="margin-top:6px">${lot.status==='done'?'Next player starts automatically in 5 seconds.':'Waiting for the host to start the auction.'}</div></div>`}${host&&live?`<button onclick="finish()">🔨 Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button>`:''}</div>`;
  }else h+=`<div class="card auction-empty"><div class="big">GULLY AUCTION</div><h2>Ready for the next player?</h2><p class="mut">The host can start the auction when everyone is ready.</p>${host?`<button class="pri" onclick="nextLot()">▶ Start first player (${remaining().length} left)</button>`:''}</div>`;
  h+=`</section><aside class="auction-side"><div class="card"><div class="row sp" style="margin-bottom:10px"><b>FRANCHISE DASHBOARD</b><span class="tag">${cfg.teams.length} teams</span></div><div class="team-board">${teams}</div></div><div class="card"><div class="row sp" style="margin-bottom:10px"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div></aside></div>`;
@@ -214,16 +248,24 @@ async function bid(){
  try{await db.doc('live/lot').update({bid:b,team:me.id,endsAt:Math.max(lot.endsAt,Date.now()+S().reset*1000)})}catch(e){toast('Bid failed — check your connection.')}
 }
 async function nextLot(){
- // Read sold players directly from Firestore so a delayed onSnapshot cannot
- // make the previous player appear available again.
+ // Use the room's shared randomized order and the latest sold list.
+ const cfgSnap=await db.doc('cfg/main').get();
+ const latest=cfgSnap.exists?cfgSnap.data():cfg;
+ if(!latest||!Array.isArray(latest.players))return toast('Auction player list is missing.');
+ let order=Array.isArray(latest.auctionOrder)?latest.auctionOrder.filter(id=>latest.players.some(p=>p.id===id)):[];
+ if(order.length!==latest.players.length){
+  const plan=buildAuctionOrder(latest.players);
+  order=plan.order;
+  await db.doc('cfg/main').update({auctionOrder:order,auctionSets:plan.sets});
+  latest.auctionOrder=order;latest.auctionSets=plan.sets;cfg=latest;
+ }
  const soldSnap=await db.collection('sold').get();
  const alreadySold=new Set(soldSnap.docs.map(d=>d.id));
- const p=cfg.players.find(player=>!alreadySold.has(player.id));
- if(!p){toast('All players are done.');return}
- await db.doc('live/lot').set({
-  pid:p.id,bid:p.base,team:null,status:'bidding',
-  endsAt:Date.now()+S().timer*1000
- });
+ const nextId=order.find(id=>!alreadySold.has(id));
+ if(!nextId){toast('All players are done.');return}
+ const p=latest.players.find(player=>player.id===nextId);
+ if(!p)return toast('Could not find the next player.');
+ await db.doc('live/lot').set({pid:p.id,bid:p.base,team:null,status:'bidding',endsAt:Date.now()+S().timer*1000});
 }
 async function finish(unsold){
  if(!lot||lot.status!=='bidding')return;
@@ -310,6 +352,7 @@ function importCsv(rep){
 async function saveCfg(){
  try{const c=JSON.parse($('#js').value);if(!c.settings||!c.teams||!c.players)throw new Error('Needs settings, teams and players');
  if(c.settings.maxOverseas==null)c.settings.maxOverseas=8;
+ const auctionPlan=buildAuctionOrder(c.players);c.auctionOrder=auctionPlan.order;c.auctionSets=auctionPlan.sets;
  await db.doc('cfg/main').set(c);toast('');alert('Saved')}catch(e){toast('Could not save: '+esc(e.message))}
 }
 async function resetAuction(){
