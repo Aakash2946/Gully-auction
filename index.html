@@ -87,9 +87,6 @@ button.bid-hero:disabled{opacity:.55;filter:grayscale(.45);box-shadow:none}
 .team-mini-meta{display:flex;gap:6px;flex-wrap:wrap;margin:5px 0}
 .team-mini-picks{font-size:12px;color:var(--mut);line-height:1.5}
 .team-mini-picks b{color:var(--ink)}
-.auction-recent{display:grid;gap:8px}
-.auction-recent-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:7px}
-.auction-recent-row:last-child{border:0;padding-bottom:0}
 .auction-empty{padding:30px;text-align:center}
 .limit-warning{color:var(--bad);font-size:12px;font-weight:700;margin-top:7px}
 @media(max-width:1150px){.auction-shell{grid-template-columns:minmax(190px,220px) minmax(0,1fr)}.auction-right{grid-column:1/-1;position:static;max-height:none}.auction-right .xi-card{display:block}.xi-slots{grid-template-columns:repeat(4,minmax(0,1fr))}}
@@ -128,7 +125,6 @@ button.bid-hero:disabled{opacity:.55;filter:grayscale(.45);box-shadow:none}
 .xi-player.selected{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--bg))}
 .xi-player.selected small{color:var(--acc2);font-weight:800}
 .xi-note,.xi-empty{font-size:10px;color:var(--mut);margin-top:9px;line-height:1.5}
-.recent-compact{margin-top:0}
 .auction-state-banner{text-align:center;border-color:var(--acc)}
 .auction-state-banner.stopped{border-color:var(--bad);color:var(--bad)}
 /* Teams tab: franchise cards split by role */
@@ -269,11 +265,40 @@ body.teams-mode main{max-width:1500px}
  .auction-actions .bid-hero{width:132px;height:132px;flex-basis:132px;min-height:132px}
  .mobile-auction-tabs button{font-size:11px}
 }
+
+/* Room chat: compact floating panel, separate from the auction layout */
+#roomChatWidget{display:none;position:fixed;left:14px;bottom:14px;z-index:18;font-size:13px}
+#roomChatToggle{border-radius:999px;padding:11px 16px;background:var(--card);border:1px solid var(--acc);color:var(--acc);font-weight:850;box-shadow:0 5px 18px #0008}
+#roomChatPanel{display:none;width:min(340px,calc(100vw - 28px));height:min(430px,calc(100dvh - 100px));margin-bottom:9px;background:var(--card);border:1px solid var(--line);border-radius:15px;box-shadow:0 12px 36px #000b;overflow:hidden;grid-template-rows:auto 1fr auto}
+#roomChatWidget.open #roomChatPanel{display:grid}
+#roomChatWidget.open #roomChatToggle{display:none}
+.room-chat-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line);font-weight:850}
+#roomChatMessages{padding:10px;overflow:auto;display:flex;flex-direction:column;gap:8px;overscroll-behavior:contain}
+.room-chat-msg{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:7px 9px;overflow-wrap:anywhere}
+.room-chat-msg.mine{border-color:var(--acc)}
+.room-chat-meta{display:flex;justify-content:space-between;gap:8px;color:var(--mut);font-size:10px;margin-bottom:3px}
+.room-chat-compose{display:flex;gap:6px;padding:9px;border-top:1px solid var(--line)}
+#roomChatInput{min-width:0;flex:1;width:0;font-size:13px}
+#roomChatSend{padding:7px 12px}
+#roomChatStatus{padding:0 10px 7px;color:var(--mut);font-size:10px}
+/* Keep the draggable paddle away from the chat dock */
+.paddle-float{left:auto;right:20px}
+@media(max-width:760px){#roomChatWidget{left:9px;bottom:9px}#roomChatPanel{height:min(390px,calc(100dvh - 90px))}.paddle-float{left:auto;right:10px;bottom:10px}}
+
 </style></head><body>
 <header><h1>GULLY <span>AUCTION</span></h1>
 <div class="row"><button id="homeBtn" title="Return to Create / Join page" style="display:none" onclick="goHome()">⌂ Home</button><input id="nm" placeholder="Your name" size="12"><select id="th" title="Theme"><option value="">Auto</option><option value="scoreboard">Scoreboard</option><option value="pavilion">Pavilion</option><option value="floodlight">Floodlight</option></select><span id="who" class="tag"></span><button id="gear" title="Host settings" style="display:none" onclick="tab='setup';render(true)">⚙</button></div></header>
 <main><div id="msg"></div><nav id="nav"></nav><div id="view"></div></main>
 <div id="modal"></div>
+<div id="roomChatWidget" aria-live="polite">
+ <div id="roomChatPanel">
+  <div class="room-chat-head"><span>💬 ROOM CHAT <span id="roomChatCount" class="tag">0</span></span><button type="button" onclick="toggleRoomChat(false)" aria-label="Close chat">✕</button></div>
+  <div id="roomChatMessages"><div class="mut">Loading room messages…</div></div>
+  <form class="room-chat-compose" onsubmit="sendRoomChat(event)"><input id="roomChatInput" maxlength="300" autocomplete="off" placeholder="Message everyone…"><button id="roomChatSend" class="pri" type="submit">Send</button></form>
+  <div id="roomChatStatus">Messages are visible to everyone in this room.</div>
+ </div>
+ <button id="roomChatToggle" type="button" onclick="toggleRoomChat(true)">💬 Room chat</button>
+</div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -371,6 +396,22 @@ function teamPicks(t){return Object.entries(sold).filter(([id,s])=>s.team===t&&p
 
 const myName=()=>{try{return localStorage.getItem('ga_name')||''}catch(e){return''}};
 function toast(t){$('#msg').innerHTML=t?`<div class="card" style="border-color:var(--bad)">${t}</div>`:''}
+let roomChatMessages=[],roomChatUnsub=null;
+function toggleRoomChat(open){const w=$('#roomChatWidget');if(!w)return;w.classList.toggle('open',!!open);if(open)setTimeout(()=>$('#roomChatInput')?.focus(),30)}
+function renderRoomChat(){
+ const box=$('#roomChatMessages'),count=$('#roomChatCount');if(!box)return;
+ if(count)count.textContent=String(roomChatMessages.length);
+ box.innerHTML=roomChatMessages.length?roomChatMessages.slice(-80).map(m=>`<div class="room-chat-msg ${m.uid===uid?'mine':''}"><div class="room-chat-meta"><b>${esc(m.name||'Player')}</b><span>${m.at?new Date(m.at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):''}</span></div><div>${esc(m.text||'')}</div></div>`).join(''):'<div class="mut">No messages yet. Say hello to your room!</div>';
+ box.scrollTop=box.scrollHeight;
+}
+async function sendRoomChat(e){
+ e.preventDefault();const input=$('#roomChatInput'),text=String(input?.value||'').trim();if(!text)return;
+ if(!db||!uid)return;
+ const btn=$('#roomChatSend');if(btn)btn.disabled=true;
+ try{await db.collection('chat').add({uid,name:myName().trim()||mine()?.name||'Player',text:text.slice(0,300),at:Date.now()});input.value='';$('#roomChatStatus').textContent='Message sent.'}
+ catch(err){$('#roomChatStatus').textContent=err.code==='permission-denied'?'Chat permission denied. Firestore rules need to allow room members to write chat messages.':'Could not send message. Check your connection.'}
+ finally{if(btn)btn.disabled=false;input?.focus()}
+}
 
 async function init(){
  const th=$('#th');try{const t=localStorage.getItem('ga_theme')||'';if(t)document.documentElement.dataset.theme=t;th.value=t}catch(e){}
@@ -391,6 +432,10 @@ function enter(code){
  db.doc('live/lot').onSnapshot(s=>{const o=lot;lot=s.exists?s.data():null;react(o,lot);render()});
  db.collection('sold').onSnapshot(q=>{sold={};q.forEach(d=>sold[d.id]=d.data());render()});
  db.collection('owners').onSnapshot(q=>{owners={};q.forEach(d=>owners[d.id]=d.data());render()});
+ if(roomChatUnsub)roomChatUnsub();
+ roomChatMessages=[];renderRoomChat();
+ roomChatUnsub=db.collection('chat').orderBy('at','desc').limit(80).onSnapshot(q=>{roomChatMessages=q.docs.map(d=>({id:d.id,...d.data()})).reverse();renderRoomChat()},e=>{$('#roomChatStatus').textContent=e.code==='permission-denied'?'Chat read permission denied. Firestore rules need to allow room members to read chat.':'Chat is temporarily unavailable.'});
+ $('#roomChatWidget').style.display='block';
 }
 let lastS=-1,seen=false,AC=null,muted=false,autoNextKey='';try{muted=localStorage.getItem('ga_mute')==='1'}catch(e){}
 let lt='create',pf='t1',pm='mega';
@@ -443,7 +488,7 @@ function nav(){
 }
 function goHome(){location.hash='';location.reload()}
 function render(force){
- const homeBtn=$('#homeBtn');if(homeBtn)homeBtn.style.display=room?'':'none';
+ const homeBtn=$('#homeBtn');if(homeBtn)homeBtn.style.display=room?'':'none';const chatWidget=$('#roomChatWidget');if(chatWidget)chatWidget.style.display=room?'block':'none';
  if(tab!=='auction')document.body.classList.remove('auction-mode');
  document.body.classList.toggle('teams-mode',tab==='teams');
  if(tab!=='auction'||!room||!cfg)paddleSync(null);
@@ -548,7 +593,6 @@ function rAuction(v){
   return `<button class="xi-slot ${player?'filled':''} ${!player&&xiPending?'target':''}" onclick="placeXISlot(${i})">
    <span class="xi-number">SLOT ${i+1}</span><b>${player?esc(player.name):'Empty slot'}</b>${player?`<small>${esc(player.role||'PLAYER')} · ${isOverseas(player)?'OVERSEAS':'INDIAN'}</small>`:xiPending?'<small>PLACE SELECTED PLAYER</small>':''}
   </button>`}).join('');
- const recent=Object.entries(sold).map(([id,s])=>({id,...s,p:ply(id),t:team(s.team)})).filter(x=>x.p&&x.t).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,5);
  h+=`<div class="auction-shell">
  <div class="mobile-auction-tabs" aria-label="Auction panels"><button class="on" data-panel="auction" onclick="setMobileAuctionPanel('auction')">🏏 Auction</button><button data-panel="teams" onclick="setMobileAuctionPanel('teams')">🏆 Teams</button><button data-panel="xi" onclick="setMobileAuctionPanel('xi')">📋 Starting XI</button></div>
  <aside class="auction-left"><div class="card left-dashboard"><div class="row sp" style="margin-bottom:9px"><b>FRANCHISES</b><span class="tag">10 teams</span></div><div class="team-board">${leftTeams}</div></div></aside>
@@ -560,9 +604,8 @@ function rAuction(v){
  if(p){const k=p.caps||{};h+=`<div class="card auction-player"><div>${avatar(p)}</div><div class="auction-player-info"><div><div class="row"><span class="tag">${esc(p.role)}</span>${p.country?`<span class="tag">${esc(p.country)}</span>`:''}<span class="tag">${overseas?'✈ OVERSEAS':(p.country?'DOMESTIC':'COUNTRY NOT SET')}</span>${p.set?`<span class="tag">Set ${esc(p.set)}</span>`:''}<span class="tag">OVR ${ovr(p)}</span><span class="tag">${esc(auctionSetName(p))}</span></div><h2 class="pn">${esc(p.name)}</h2><div class="auction-stats">${[['IPL',k.ipl],['T20I',k.t20],['ODI',k.odi],['TEST',k.test]].map(a=>`<div><small>${a[0]}</small><b>${a[1]||0}</b></div>`).join('')}</div></div><div><div class="auction-bidbar"><div><small class="mut">BASE PRICE · CURRENT BID</small><div class="auction-current-bid">${fmt(lot.bid)}</div><div>${currentTeam?`<span class="dot" style="background:${currentTeam.color}"></span> <b>${esc(currentTeam.name)}</b> is leading`:'<span class="mut">No bids yet</span>'}</div></div><div><small class="mut">TIME LEFT</small><div id="tm" class="auction-timer timer"></div></div></div>${blocked?`<div class="limit-warning">Overseas limit reached. Your team cannot bid on another overseas player.</div>`:''}${me&&nextBid()>left(me.id)?'<div class="limit-warning">Your remaining purse is too low for the next bid.</div>':''}${me&&squad(me.id).length>=S().maxSquad?'<div class="limit-warning">Your squad is full.</div>':''}</div></div></div>
  <div class="auction-actions">${live?'':`<div class="card" style="flex:1;margin:0"><b>${lot.status==='done'?(currentTeam?'SOLD TO '+esc(currentTeam.name)+' FOR '+fmt(lot.bid):'UNSOLD'):'Auction ready'}</b><div class="mut" style="margin-top:6px">${lot.status==='done'?'Next player starts automatically in 5 seconds.':'Waiting for the host to start the auction.'}</div></div>`}${host&&live?`<div class="host-actions"><button onclick="finish()">🔨 Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button></div>`:''}</div>`;
  }else h+=`<div class="card auction-empty"><div class="big">GULLY AUCTION</div><h2>Ready for the next player?</h2><p class="mut">The host can start the auction when everyone is ready.</p>${host&&!stopped?`<button class="pri" onclick="nextLot()">▶ Start first player (${remaining().length} left)</button>`:''}</div>`;
- h+=`<div class="card recent-compact"><div class="row sp"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div>
- </section>
- <aside class="auction-right"><div class="card xi-card"><div class="row sp"><b>STARTING XI</b><span class="tag">${xi.length}/11 · ✈ ${xiOverseas}/4</span></div>${me?`<div class="mut xi-team-label">${esc(me.name)} · select a bought player, then choose their slot</div><div class="xi-pitch"><div class="xi-slots">${xiSlots}</div></div><div class="xi-bought-head"><b>YOUR BOUGHT PLAYERS</b><span class="tag">${myPicks.length} players</span></div><div class="xi-bought">${myPicks.map(x=>`<button class="xi-player ${xi.includes(x.id)?'selected':''} ${xiPending===x.id?'pending':''}" onclick="selectXIPlayer('${x.id}')"><b>${esc(x.name)}</b><span>${esc(x.role||'PLAYER')} · ${fmt(Object.values(sold).find(z=>z.team===me.id&&ply(x.id)?.id===x.id)?.price||0)}</span>${xi.includes(x.id)?'<small>✓ IN XI · click to remove</small>':xiPending===x.id?'<small>✓ SELECTED · NOW CHOOSE A SLOT</small>':'<small>＋ SELECT PLAYER</small>'}</button>`).join('')||'<div class="mut">Players you buy will appear here.</div>'}</div><div class="xi-note">Select a bought player first, then click the exact empty slot you want. Click an occupied slot or an XI player to remove them.</div>`:'<div class="xi-empty">Choose a franchise in the Teams tab to build its starting XI.</div>'}</div></aside></div>`;
+ h+=`</section>`;
+ h+=`<aside class="auction-right"><div class="card xi-card"><div class="row sp"><b>STARTING XI</b><span class="tag">${xi.length}/11 · ✈ ${xiOverseas}/4</span></div>${me?`<div class="mut xi-team-label">${esc(me.name)} · select a bought player, then choose their slot</div><div class="xi-pitch"><div class="xi-slots">${xiSlots}</div></div><div class="xi-bought-head"><b>YOUR BOUGHT PLAYERS</b><span class="tag">${myPicks.length} players</span></div><div class="xi-bought">${myPicks.map(x=>`<button class="xi-player ${xi.includes(x.id)?'selected':''} ${xiPending===x.id?'pending':''}" onclick="selectXIPlayer('${x.id}')"><b>${esc(x.name)}</b><span>${esc(x.role||'PLAYER')} · ${fmt(Object.values(sold).find(z=>z.team===me.id&&ply(x.id)?.id===x.id)?.price||0)}</span>${xi.includes(x.id)?'<small>✓ IN XI · click to remove</small>':xiPending===x.id?'<small>✓ SELECTED · NOW CHOOSE A SLOT</small>':'<small>＋ SELECT PLAYER</small>'}</button>`).join('')||'<div class="mut">Players you buy will appear here.</div>'}</div><div class="xi-note">Select a bought player first, then click the exact empty slot you want. Click an occupied slot or an XI player to remove them.</div>`:'<div class="xi-empty">Choose a franchise in the Teams tab to build its starting XI.</div>'}</div></aside></div>`;
  v.innerHTML=h;tick();
  paddleSync(live&&p?{color:me?me.color:'var(--acc)',code:me?paddleCode(me):'BID',action:me?(lot.team===me.id?'YOU ARE LEADING':'BID '+fmt(nextBid())):'JOIN A TEAM',sub:me?me.name+' PADDLE':'SELECT YOUR FRANCHISE',can:canBid}:null);
 }
