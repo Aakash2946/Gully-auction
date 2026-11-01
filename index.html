@@ -151,6 +151,18 @@ body.teams-mode main{max-width:1500px}
 .crest-in{position:absolute;inset:4px;clip-path:polygon(50% 0,100% 12%,100% 62%,50% 100%,0 62%,0 12%);background:linear-gradient(160deg,var(--team),color-mix(in srgb,var(--team) 40%,#000));display:grid;place-items:center}
 @media(max-width:560px){.fgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.ftile{padding:12px 6px}.ftile-logo{height:96px}.ftile-name{font-size:12px}.ftile-meta{display:none}}
 .crest-in span{font-family:"Courier New",ui-monospace,monospace;font-weight:900;font-size:calc(var(--s)*.27);color:#fff;text-shadow:0 2px 4px #0008;margin-top:-6%}
+/* Floating draggable bid paddle + right-aligned host controls */
+.paddle-float{position:fixed;left:20px;bottom:20px;z-index:15;--ps:clamp(130px,15vw,190px);width:var(--ps);height:var(--ps);touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px;text-align:center;border:3px solid color-mix(in srgb,var(--paddle-color,var(--acc)) 72%,#fff);border-radius:22px;background:radial-gradient(circle at 50% 25%,color-mix(in srgb,var(--paddle-color,var(--acc)) 88%,#fff),var(--paddle-color,var(--acc)) 65%,color-mix(in srgb,var(--paddle-color,var(--acc)) 65%,#000));color:#fff;text-shadow:0 2px 5px #0009;box-shadow:0 7px 0 color-mix(in srgb,var(--paddle-color,var(--acc)) 55%,#000),0 14px 34px #0008,0 0 28px color-mix(in srgb,var(--paddle-color,var(--acc)) 45%,transparent);transition:transform .08s,box-shadow .08s}
+.paddle-float:active:not(.drag){transform:translateY(3px)}
+.paddle-float.drag{cursor:grabbing;transform:scale(1.05) rotate(-2deg);box-shadow:0 20px 44px #000b,0 0 34px color-mix(in srgb,var(--paddle-color,var(--acc)) 55%,transparent)}
+.paddle-float.off{opacity:.6;filter:grayscale(.45)}
+.paddle-float .paddle-mark{width:calc(var(--ps)*.44);height:calc(var(--ps)*.44);font-size:calc(var(--ps)*.15)}
+.paddle-float .paddle-action{font-size:clamp(12px,calc(var(--ps)*.1),19px)}
+.paddle-grip{position:absolute;top:6px;left:0;right:0;text-align:center;font-size:9px;letter-spacing:2px;opacity:.7}
+.paddle-hint{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.paddle-hint button{padding:4px 10px;font-size:12px;border-radius:8px}
+.host-actions{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:560px){.paddle-hint,.host-actions{grid-column:1/-1;margin-left:0}.host-actions{justify-content:stretch}.host-actions button{flex:1}}
 </style></head><body>
 <header><h1>GULLY <span>AUCTION</span></h1>
 <div class="row"><input id="nm" placeholder="Your name" size="12"><select id="th" title="Theme"><option value="">Auto</option><option value="scoreboard">Scoreboard</option><option value="pavilion">Pavilion</option><option value="floodlight">Floodlight</option></select><span id="who" class="tag"></span><button id="gear" title="Host settings" style="display:none" onclick="tab='setup';render(true)">⚙</button></div></header>
@@ -326,6 +338,7 @@ function nav(){
 function render(force){
  if(tab!=='auction')document.body.classList.remove('auction-mode');
  document.body.classList.toggle('teams-mode',tab==='teams');
+ if(tab!=='auction'||!room||!cfg)paddleSync(null);
  if(tab==='setup'&&!host)tab='auction';
  nav();const v=$('#view');
  if(!room){$('#nav').innerHTML='';landing(v);return}
@@ -334,6 +347,28 @@ function render(force){
  if(!cfg&&tab!=='setup'){v.innerHTML=`<div class="card"><b>No auction set up yet.</b><p class="mut">${host?'Go to Setup and load the sample or paste your own teams and players.':'Waiting for the host to set things up…'}</p></div>`;return}
  ({auction:rAuction,teams:rTeams,players:rPlayers,results:rResults,setup:rSetup})[tab](v);
 }
+// Floating, draggable bid paddle. It lives outside #view so snapshot re-renders never move it.
+let pdPos=null,pdDrag=null;try{pdPos=JSON.parse(localStorage.getItem('ga_paddle')||'null')}catch(e){}
+function pdClamp(x,y,el){return{x:Math.max(6,Math.min(innerWidth-el.offsetWidth-6,x)),y:Math.max(6,Math.min(innerHeight-el.offsetHeight-6,y))}}
+function pdApply(el){if(pdPos){const c=pdClamp(pdPos.x,pdPos.y,el);el.style.left=c.x+'px';el.style.top=c.y+'px';el.style.bottom='auto'}else{el.style.left='';el.style.top='';el.style.bottom=''}}
+function pdReset(){pdPos=null;try{localStorage.removeItem('ga_paddle')}catch(e){}const el=$('#paddle');if(el)pdApply(el)}
+function pdBind(el){
+ el.addEventListener('pointerdown',e=>{if(e.button>0)return;const r=el.getBoundingClientRect();pdDrag={dx:e.clientX-r.left,dy:e.clientY-r.top,sx:e.clientX,sy:e.clientY,moved:false};try{el.setPointerCapture(e.pointerId)}catch(_){}});
+ el.addEventListener('pointermove',e=>{if(!pdDrag)return;if(!pdDrag.moved){if(Math.hypot(e.clientX-pdDrag.sx,e.clientY-pdDrag.sy)<6)return;pdDrag.moved=true;el.classList.add('drag')}pdPos=pdClamp(e.clientX-pdDrag.dx,e.clientY-pdDrag.dy,el);pdApply(el)});
+ el.addEventListener('pointerup',e=>{if(!pdDrag)return;const d=pdDrag;pdDrag=null;el.classList.remove('drag');try{el.releasePointerCapture(e.pointerId)}catch(_){}
+  if(d.moved){try{localStorage.setItem('ga_paddle',JSON.stringify(pdPos))}catch(_){}}else if(!el.classList.contains('off'))bid()});
+ el.addEventListener('pointercancel',()=>{pdDrag=null;el.classList.remove('drag')});
+ el.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!el.classList.contains('off')){e.preventDefault();bid()}});
+}
+function paddleSync(st){
+ let el=$('#paddle');
+ if(!st){if(el)el.style.display='none';return}
+ if(!el){el=document.createElement('div');el.id='paddle';el.className='paddle-float';el.setAttribute('role','button');el.tabIndex=0;document.body.appendChild(el);pdBind(el)}
+ el.style.display='';el.style.setProperty('--paddle-color',st.color);el.classList.toggle('off',!st.can);
+ el.innerHTML=`<span class="paddle-grip">⠿ DRAG ⠿</span><span class="paddle-mark">${esc(st.code)}</span><span class="paddle-action">${esc(st.action)}</span><span class="paddle-sub">${esc(st.sub)}</span>`;
+ pdApply(el);
+}
+addEventListener('resize',()=>{const el=$('#paddle');if(el&&pdPos)pdApply(el)});
 function rAuction(v){
  document.body.classList.add('auction-mode');
  const me=mine(),p=lot&&ply(lot.pid),live=lot&&lot.status==='bidding';let h='';
@@ -343,12 +378,13 @@ function rAuction(v){
  const canBid=!!(live&&me&&lot.team!==me.id&&!blocked&&nextBid()<=left(me.id)&&squad(me.id).length<S().maxSquad);
  const recent=Object.entries(sold).map(([id,s])=>({id,...s,p:ply(id),t:team(s.team)})).filter(x=>x.p&&x.t).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,6);
  const teams=cfg?cfg.teams.map(t=>{const picks=teamPicks(t.id),o=owners[t.id],isMine=me&&me.id===t.id,isLead=lot&&lot.team===t.id;return `<div class="team-mini ${isMine?'mine-team':''} ${isLead?'leading-team':''}" style="--team:${t.color}"><div class="team-mini-head"><span class="team-mini-name"><span class="dot" style="background:${t.color}"></span>${esc(t.name)} ${isMine?'<span class="tag">YOU</span>':''} ${isLead?'<span class="tag">LEADING</span>':''}</span><span class="team-mini-purse">${fmt(left(t.id))}</span></div><div class="team-mini-meta"><span class="tag">${esc(o&&o.name||'Unclaimed')}</span><span class="tag">${picks.length}/${S().maxSquad} players</span><span class="tag">✈ ${overseasCount(t.id)}/${overseasLimit()}</span></div><div class="team-mini-picks">${picks.length?'<b>Latest picks:</b> '+picks.slice(0,3).map(x=>esc(x.p.name)+' ('+fmt(x.price)+')').join(' · '):'No players bought yet'}</div></div>`}).join(''):'';
- h+=`<div class="auction-shell"><section class="auction-main"><div class="card auction-topline"><div class="auction-status">${me?`<b style="color:${me.color}">${esc(me.name)}</b><span class="mut">· Purse</span><b>${fmt(left(me.id))}</b><span class="tag">Squad ${squad(me.id).length}/${S().maxSquad}</span><span class="tag">✈ Overseas ${myOverseas}/${overseasLimit()}</span>`:'<b>Choose your franchise in the Teams tab to bid.</b>'}</div><button id="mu" onclick="toggleMute()" style="padding:7px 12px">${muted?'🔇':'🔊'} Sound</button></div>`;
+ h+=`<div class="auction-shell"><section class="auction-main"><div class="card auction-topline"><div class="auction-status">${me?`<b style="color:${me.color}">${esc(me.name)}</b><span class="mut">· Purse</span><b>${fmt(left(me.id))}</b><span class="tag">Squad ${squad(me.id).length}/${S().maxSquad}</span><span class="tag">✈ Overseas ${myOverseas}/${overseasLimit()}</span>`:'<b>Choose your franchise in the Teams tab to bid.</b>'}</div><span class="row">${live?'<button onclick="pdReset()" title="Drag the floating paddle anywhere. Click here to put it back" style="padding:7px 12px">⟲ Reset paddle</button>':''}<button id="mu" onclick="toggleMute()" style="padding:7px 12px">${muted?'🔇':'🔊'} Sound</button></span></div>`;
  if(p){const k=p.caps||{};h+=`<div class="card auction-player"><div>${avatar(p)}</div><div class="auction-player-info"><div><div class="row"><span class="tag">${esc(p.role)}</span>${p.country?`<span class="tag">${esc(p.country)}</span>`:''}<span class="tag">${overseas?'✈ OVERSEAS':(p.country?'DOMESTIC':'COUNTRY NOT SET')}</span>${p.set?`<span class="tag">Set ${esc(p.set)}</span>`:''}<span class="tag">OVR ${ovr(p)}</span><span class="tag">${esc(auctionSetName(p))}</span></div><h2 class="pn">${esc(p.name)}</h2><div class="auction-stats">${[['IPL',k.ipl],['T20I',k.t20],['ODI',k.odi],['TEST',k.test]].map(a=>`<div><small>${a[0]}</small><b>${a[1]||0}</b></div>`).join('')}</div></div><div><div class="auction-bidbar"><div><small class="mut">BASE PRICE · CURRENT BID</small><div class="auction-current-bid">${fmt(lot.bid)}</div><div>${currentTeam?`<span class="dot" style="background:${currentTeam.color}"></span> <b>${esc(currentTeam.name)}</b> is leading`:'<span class="mut">No bids yet</span>'}</div></div><div><small class="mut">TIME LEFT</small><div id="tm" class="auction-timer timer"></div></div></div>${blocked?`<div class="limit-warning">Overseas limit reached. Your team cannot bid on another overseas player.</div>`:''}${me&&nextBid()>left(me.id)?'<div class="limit-warning">Your remaining purse is too low for the next bid.</div>':''}${me&&squad(me.id).length>=S().maxSquad?'<div class="limit-warning">Your squad is full.</div>':''}</div></div></div>
- <div class="auction-actions">${live?`<button class="bid-hero" style="--paddle-color:${me?me.color:'var(--acc)'}" onclick="bid()" ${canBid?'':'disabled'}><span class="paddle-mark">${me?esc(paddleCode(me)):'BID'}</span><span class="paddle-action">${me?(lot.team===me.id?'YOU ARE LEADING':`BID ${fmt(nextBid())}`):'JOIN A TEAM'}</span><span class="paddle-sub">${me?esc(me.name)+' PADDLE':'SELECT YOUR FRANCHISE'}</span></button>`:`<div class="card" style="flex:1;margin:0"><b>${lot.status==='done'?(currentTeam?'SOLD TO '+esc(currentTeam.name)+' FOR '+fmt(lot.bid):'UNSOLD'):'Auction ready'}</b><div class="mut" style="margin-top:6px">${lot.status==='done'?'Next player starts automatically in 5 seconds.':'Waiting for the host to start the auction.'}</div></div>`}${host&&live?`<button onclick="finish()">🔨 Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button>`:''}</div>`;
+ <div class="auction-actions">${live?'':`<div class="card" style="flex:1;margin:0"><b>${lot.status==='done'?(currentTeam?'SOLD TO '+esc(currentTeam.name)+' FOR '+fmt(lot.bid):'UNSOLD'):'Auction ready'}</b><div class="mut" style="margin-top:6px">${lot.status==='done'?'Next player starts automatically in 5 seconds.':'Waiting for the host to start the auction.'}</div></div>`}${host&&live?`<div class="host-actions"><button onclick="finish()">🔨 Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button></div>`:''}</div>`;
  }else h+=`<div class="card auction-empty"><div class="big">GULLY AUCTION</div><h2>Ready for the next player?</h2><p class="mut">The host can start the auction when everyone is ready.</p>${host?`<button class="pri" onclick="nextLot()">▶ Start first player (${remaining().length} left)</button>`:''}</div>`;
  h+=`</section><aside class="auction-side"><div class="card"><div class="row sp" style="margin-bottom:10px"><b>FRANCHISE DASHBOARD</b><span class="tag">${cfg.teams.length} teams</span></div><div class="team-board">${teams}</div></div><div class="card"><div class="row sp" style="margin-bottom:10px"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div></aside></div>`;
  v.innerHTML=h;tick();
+ paddleSync(live&&p?{color:me?me.color:'var(--acc)',code:me?paddleCode(me):'BID',action:me?(lot.team===me.id?'YOU ARE LEADING':'BID '+fmt(nextBid())):'JOIN A TEAM',sub:me?me.name+' PADDLE':'SELECT YOUR FRANCHISE',can:canBid}:null);
 }
 const remaining=()=>cfg?cfg.players.filter(p=>!sold[p.id]):[];
 const incFor=b=>b<1?.05:b<2?.1:b<5?.2:.25;
