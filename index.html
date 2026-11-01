@@ -412,17 +412,17 @@ function paddleSync(st){
  pdApply(el);
 }
 addEventListener('resize',()=>{const el=$('#paddle');if(el&&pdPos)pdApply(el)});
-const XI_SLOTS=['WK','BAT','BAT','BAT','BAT','AR','AR','BOWL','BOWL','BOWL','BOWL'];
+const XI_SLOTS=Array.from({length:11},(_,i)=>i+1);
 function xiKey(t){return 'ga_xi_'+room+'_'+t}
 function getXI(t){try{return JSON.parse(localStorage.getItem(xiKey(t))||'[]')}catch(e){return[]}}
 function toggleXI(pid){
  const me=mine();if(!me)return toast('Choose your franchise first.');
- const picks=squad(me.id).map(x=>x.p).filter(Boolean);
+ const picks=teamPicks(me.id).map(x=>x.p).filter(Boolean);
  if(!picks.some(p=>p.id===pid))return;
  let ids=getXI(me.id);
  if(ids.includes(pid))ids=ids.filter(x=>x!==pid);
  else if(ids.length<11)ids.push(pid);
- else return toast('Your starting XI already has 11 players. Remove one first.');
+ else return toast('Your Starting XI already has 11 players. Remove one first.');
  try{localStorage.setItem(xiKey(me.id),JSON.stringify(ids))}catch(e){}
  render(true);
 }
@@ -445,7 +445,7 @@ function rAuction(v){
  const xiSlots=XI_SLOTS.map((role,i)=>{
   const player=xiPlayers[i];
   return `<button class="xi-slot ${player?'filled':''}" onclick="${player?`toggleXI('${player.id}')`:''}" ${player?'':'disabled'}>
-   <span class="xi-number">${i+1}</span><span class="xi-role">${role}</span><b>${player?esc(player.name):'Empty slot'}</b>${player?`<small>${esc(player.role||'PLAYER')} · ${isOverseas(player)?'OVERSEAS':'INDIAN'}</small>`:''}
+   <span class="xi-number">SLOT ${i+1}</span><b>${player?esc(player.name):'Empty slot'}</b>${player?`<small>${esc(player.role||'PLAYER')} · ${isOverseas(player)?'OVERSEAS':'INDIAN'}</small>`:''}
   </button>`}).join('');
  const available=myPicks.filter(x=>!xi.includes(x.id));
  const recent=Object.entries(sold).map(([id,s])=>({id,...s,p:ply(id),t:team(s.team)})).filter(x=>x.p&&x.t).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,5);
@@ -461,7 +461,7 @@ function rAuction(v){
  }else h+=`<div class="card auction-empty"><div class="big">GULLY AUCTION</div><h2>Ready for the next player?</h2><p class="mut">The host can start the auction when everyone is ready.</p>${host&&!stopped?`<button class="pri" onclick="nextLot()">▶ Start first player (${remaining().length} left)</button>`:''}</div>`;
  h+=`<div class="card recent-compact"><div class="row sp"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div>
  </section>
- <aside class="auction-right"><div class="card xi-card"><div class="row sp"><b>STARTING XI BUILDER</b><span class="tag">${xi.length}/11</span></div>${me?`<div class="mut xi-team-label">${esc(me.name)} · click a bought player below to add them</div><div class="xi-pitch"><div class="xi-slots">${xiSlots}</div></div><div class="xi-bought-head"><b>YOUR BOUGHT PLAYERS</b><span class="tag">${myPicks.length} players</span></div><div class="xi-bought">${myPicks.map(x=>`<button class="xi-player ${xi.includes(x.id)?'selected':''}" onclick="toggleXI('${x.id}')"><b>${esc(x.name)}</b><span>${esc(x.role||'PLAYER')} · ${fmt(Object.values(sold).find(z=>z.team===me.id&&ply(x.id)?.id===x.id)?.price||0)}</span>${xi.includes(x.id)?'<small>✓ IN XI · click to remove</small>':'<small>＋ ADD TO XI</small>'}</button>`).join('')||'<div class="mut">Players you buy will appear here.</div>'}</div><div class="xi-note">Your XI selection is saved in this browser for this room. Select up to 11 players. Click a filled slot or selected player to remove them.</div>`:'<div class="xi-empty">Choose a franchise in the Teams tab to build its starting XI.</div>'}</div></aside></div>`;
+ <aside class="auction-right"><div class="card xi-card"><div class="row sp"><b>STARTING XI</b><span class="tag">${xi.length}/11</span></div>${me?`<div class="mut xi-team-label">${esc(me.name)} · select a bought player below to add them</div><div class="xi-pitch"><div class="xi-slots">${xiSlots}</div></div><div class="xi-bought-head"><b>YOUR BOUGHT PLAYERS</b><span class="tag">${myPicks.length} players</span></div><div class="xi-bought">${myPicks.map(x=>`<button class="xi-player ${xi.includes(x.id)?'selected':''}" onclick="toggleXI('${x.id}')"><b>${esc(x.name)}</b><span>${esc(x.role||'PLAYER')} · ${fmt(Object.values(sold).find(z=>z.team===me.id&&ply(x.id)?.id===x.id)?.price||0)}</span>${xi.includes(x.id)?'<small>✓ IN XI · click to remove</small>':'<small>＋ ADD TO XI</small>'}</button>`).join('')||'<div class="mut">Players you buy will appear here.</div>'}</div><div class="xi-note">Your Starting XI is saved in this browser for this room. Select up to 11 bought players. Click a selected player or filled slot to remove them.</div>`:'<div class="xi-empty">Choose a franchise in the Teams tab to build its starting XI.</div>'}</div></aside></div>`;
  v.innerHTML=h;tick();
  paddleSync(live&&p?{color:me?me.color:'var(--acc)',code:me?paddleCode(me):'BID',action:me?(lot.team===me.id?'YOU ARE LEADING':'BID '+fmt(nextBid())):'JOIN A TEAM',sub:me?me.name+' PADDLE':'SELECT YOUR FRANCHISE',can:canBid}:null);
 }
