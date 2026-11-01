@@ -151,7 +151,7 @@ function enter(code){
  db.collection('sold').onSnapshot(q=>{sold={};q.forEach(d=>sold[d.id]=d.data());render()});
  db.collection('owners').onSnapshot(q=>{owners={};q.forEach(d=>owners[d.id]=d.data());render()});
 }
-let lastS=-1,seen=false,AC=null,muted=false;try{muted=localStorage.getItem('ga_mute')==='1'}catch(e){}
+let lastS=-1,seen=false,AC=null,muted=false,autoNextKey='';try{muted=localStorage.getItem('ga_mute')==='1'}catch(e){}
 let lt='create',pf='t1',pm='mega';
 const MODES={mega:['Mega',25,120],classic:['Classic',11,90],sprint:['Sprint',5,60]};
 const HIST=()=>{try{return JSON.parse(localStorage.getItem('ga_hist')||'[]').filter(h=>/^\d{6}$/.test(h.code))}catch(e){return[]}};
@@ -196,7 +196,7 @@ function rAuction(v){
  const teams=cfg?cfg.teams.map(t=>{const picks=teamPicks(t.id),o=owners[t.id],isMine=me&&me.id===t.id,isLead=lot&&lot.team===t.id;return `<div class="team-mini ${isMine?'mine-team':''} ${isLead?'leading-team':''}" style="--team:${t.color}"><div class="team-mini-head"><span class="team-mini-name"><span class="dot" style="background:${t.color}"></span>${esc(t.name)} ${isMine?'<span class="tag">YOU</span>':''} ${isLead?'<span class="tag">LEADING</span>':''}</span><span class="team-mini-purse">${fmt(left(t.id))}</span></div><div class="team-mini-meta"><span class="tag">${esc(o&&o.name||'Unclaimed')}</span><span class="tag">${picks.length}/${S().maxSquad} players</span><span class="tag">✈ ${overseasCount(t.id)}/${overseasLimit()}</span></div><div class="team-mini-picks">${picks.length?'<b>Latest picks:</b> '+picks.slice(0,3).map(x=>esc(x.p.name)+' ('+fmt(x.price)+')').join(' · '):'No players bought yet'}</div></div>`}).join(''):'';
  h+=`<div class="auction-shell"><section class="auction-main"><div class="card auction-topline"><div class="auction-status">${me?`<b style="color:${me.color}">${esc(me.name)}</b><span class="mut">· Purse</span><b>${fmt(left(me.id))}</b><span class="tag">Squad ${squad(me.id).length}/${S().maxSquad}</span><span class="tag">✈ Overseas ${myOverseas}/${overseasLimit()}</span>`:'<b>Choose your franchise in the Teams tab to bid.</b>'}</div><button id="mu" onclick="toggleMute()" style="padding:7px 12px">${muted?'🔇':'🔊'} Sound</button></div>`;
  if(p){const k=p.caps||{};h+=`<div class="card auction-player"><div>${avatar(p)}</div><div class="auction-player-info"><div><div class="row"><span class="tag">${esc(p.role)}</span>${p.country?`<span class="tag">${esc(p.country)}</span>`:''}<span class="tag">${overseas?'✈ OVERSEAS':(p.country?'DOMESTIC':'COUNTRY NOT SET')}</span>${p.set?`<span class="tag">Set ${esc(p.set)}</span>`:''}<span class="tag">OVR ${ovr(p)}</span></div><h2 class="pn">${esc(p.name)}</h2><div class="auction-stats">${[['IPL',k.ipl],['T20I',k.t20],['ODI',k.odi],['TEST',k.test]].map(a=>`<div><small>${a[0]}</small><b>${a[1]||0}</b></div>`).join('')}</div></div><div><div class="auction-bidbar"><div><small class="mut">BASE PRICE · CURRENT BID</small><div class="auction-current-bid">${fmt(lot.bid)}</div><div>${currentTeam?`<span class="dot" style="background:${currentTeam.color}"></span> <b>${esc(currentTeam.name)}</b> is leading`:'<span class="mut">No bids yet</span>'}</div></div><div><small class="mut">TIME LEFT</small><div id="tm" class="auction-timer timer"></div></div></div>${blocked?`<div class="limit-warning">Overseas limit reached. Your team cannot bid on another overseas player.</div>`:''}${me&&nextBid()>left(me.id)?'<div class="limit-warning">Your remaining purse is too low for the next bid.</div>':''}${me&&squad(me.id).length>=S().maxSquad?'<div class="limit-warning">Your squad is full.</div>':''}</div></div></div>
- <div class="auction-actions">${live?`<button class="bid-hero" style="--paddle-color:${me?me.color:'var(--acc)'}" onclick="bid()" ${canBid?'':'disabled'}><span class="paddle-mark">${me?esc(paddleCode(me)):'BID'}</span><span class="paddle-action">${me?(lot.team===me.id?'YOU ARE LEADING':`BID ${fmt(nextBid())}`):'JOIN A TEAM'}</span><span class="paddle-sub">${me?esc(me.name)+' PADDLE':'SELECT YOUR FRANCHISE'}</span></button>`:`<div class="card" style="flex:1;margin:0"><b>${lot.status==='done'?(currentTeam?'SOLD TO '+esc(currentTeam.name)+' FOR '+fmt(lot.bid):'UNSOLD'):'Auction ready'}</b></div>`}${host&&live?`<button onclick="finish()">🔨 Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button>`:''}${host&&!live?`<button class="pri" onclick="nextLot()">▶ Start next player (${remaining().length} left)</button>`:''}</div>`;
+ <div class="auction-actions">${live?`<button class="bid-hero" style="--paddle-color:${me?me.color:'var(--acc)'}" onclick="bid()" ${canBid?'':'disabled'}><span class="paddle-mark">${me?esc(paddleCode(me)):'BID'}</span><span class="paddle-action">${me?(lot.team===me.id?'YOU ARE LEADING':`BID ${fmt(nextBid())}`):'JOIN A TEAM'}</span><span class="paddle-sub">${me?esc(me.name)+' PADDLE':'SELECT YOUR FRANCHISE'}</span></button>`:`<div class="card" style="flex:1;margin:0"><b>${lot.status==='done'?(currentTeam?'SOLD TO '+esc(currentTeam.name)+' FOR '+fmt(lot.bid):'UNSOLD'):'Auction ready'}</b><div class="mut" style="margin-top:6px">${lot.status==='done'?'Next player starts automatically in 5 seconds.':'Waiting for the host to start the auction.'}</div></div>`}${host&&live?`<button onclick="finish()">🔨 Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button>`:''}</div>`;
  }else h+=`<div class="card auction-empty"><div class="big">GULLY AUCTION</div><h2>Ready for the next player?</h2><p class="mut">The host can start the auction when everyone is ready.</p>${host?`<button class="pri" onclick="nextLot()">▶ Start first player (${remaining().length} left)</button>`:''}</div>`;
  h+=`</section><aside class="auction-side"><div class="card"><div class="row sp" style="margin-bottom:10px"><b>FRANCHISE DASHBOARD</b><span class="tag">${cfg.teams.length} teams</span></div><div class="team-board">${teams}</div></div><div class="card"><div class="row sp" style="margin-bottom:10px"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div></aside></div>`;
  v.innerHTML=h;tick();
@@ -224,10 +224,20 @@ async function finish(unsold){
  const t=unsold?null:l.team;
  if(t&&isOverseas(ply(l.pid))&&overseasCount(t)>=overseasLimit()){toast('Cannot sell: '+(team(t)?.name||'This team')+' has reached the overseas limit of '+overseasLimit()+'.');return}
  await db.doc('sold/'+l.pid).set({team:t,price:t?l.bid:0,at:Date.now()});
- await db.doc('live/lot').set({...l,team:t,status:'done'});
+ await db.doc('live/lot').set({...l,team:t,status:'done',nextAt:Date.now()+5000});
 }
 function tick(){
  const el=$('#tm');if(!el||!lot)return;
+ if(lot.status==='done'){
+  const wait=Math.max(0,(lot.nextAt||0)-Date.now());
+  el.textContent=wait>0?'NEXT '+Math.ceil(wait/1000)+'s':'';
+  el.className='timer';
+  if(host&&lot.nextAt&&wait===0&&autoNextKey!==lot.pid){
+   autoNextKey=lot.pid;
+   nextLot().catch(e=>{autoNextKey='';toast('Could not start next player. The host can retry.');});
+  }
+  return;
+ }
  if(lot.status!=='bidding'){el.textContent='';return}
  const s=Math.max(0,Math.ceil((lot.endsAt-Date.now())/1000));
  if(s<=3&&s>0&&s!==lastS)sfx.tick();lastS=s;el.textContent=s+'s';el.className='timer'+(s<=5?' lowt':'');
