@@ -377,7 +377,7 @@ function paddleSync(st){
 addEventListener('resize',()=>{const el=$('#paddle');if(el&&pdPos)pdApply(el)});
 function rAuction(v){
  document.body.classList.add('auction-mode');
- const me=mine(),p=lot&&ply(lot.pid),live=lot&&lot.status==='bidding'&&(!meta||meta.auctionState!=='paused')&&(!meta||meta.auctionState!=='stopped');let h='';
+ const me=mine(),p=lot&&ply(lot.pid),paused=!!(lot&&lot.auctionControl==='paused'),stopped=!!(lot&&lot.auctionControl==='stopped'),live=lot&&lot.status==='bidding'&&!paused&&!stopped;let h='';
  const currentTeam=lot&&lot.team?team(lot.team):null;
  const overseas=p&&isOverseas(p),myOverseas=me?overseasCount(me.id):0;
  const blocked=!!(live&&me&&overseas&&myOverseas>=overseasLimit());
@@ -385,12 +385,12 @@ function rAuction(v){
  const recent=Object.entries(sold).map(([id,s])=>({id,...s,p:ply(id),t:team(s.team)})).filter(x=>x.p&&x.t).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,6);
  const teams=cfg?cfg.teams.map(t=>{const picks=teamPicks(t.id),o=owners[t.id],isMine=me&&me.id===t.id,isLead=lot&&lot.team===t.id;return `<div class="team-mini ${isMine?'mine-team':''} ${isLead?'leading-team':''}" style="--team:${t.color}"><div class="team-mini-head"><span class="team-mini-name"><span class="dot" style="background:${t.color}"></span>${esc(t.name)} ${isMine?'<span class="tag">YOU</span>':''} ${isLead?'<span class="tag">LEADING</span>':''}</span><span class="team-mini-purse">${fmt(left(t.id))}</span></div><div class="team-mini-meta"><span class="tag">${esc(o&&o.name||'Unclaimed')}</span><span class="tag">${picks.length}/${S().maxSquad} players</span><span class="tag">✈ ${overseasCount(t.id)}/${overseasLimit()}</span></div><div class="team-mini-picks">${picks.length?'<b>Latest picks:</b> '+picks.slice(0,3).map(x=>esc(x.p.name)+' ('+fmt(x.price)+')').join(' · '):'No players bought yet'}</div></div>`}).join(''):'';
  h+=`<div class="auction-shell"><section class="auction-main"><div class="card auction-topline"><div class="auction-status">${me?`<b style="color:${me.color}">${esc(me.name)}</b><span class="mut">· Purse</span><b>${fmt(left(me.id))}</b><span class="tag">Squad ${squad(me.id).length}/${S().maxSquad}</span><span class="tag">✈ Overseas ${myOverseas}/${overseasLimit()}</span>`:'<b>Choose your franchise in the Teams tab to bid.</b>'}</div><span class="row">${live?'<button onclick="pdReset()" title="Drag the floating paddle anywhere. Click here to put it back" style="padding:7px 12px">⟲ Reset paddle</button>':''}<button id="mu" onclick="toggleMute()" style="padding:7px 12px">${muted?'🔇':'🔊'} Sound</button></span></div>`;
- if(meta&&meta.auctionState==='paused')h+=`<div class="card" style="text-align:center;border-color:var(--acc)"><b style="color:var(--acc)">Ⅱ AUCTION PAUSED BY HOST</b><div class="mut">The timer is frozen. Waiting for the host to resume.</div></div>`;
- if(meta&&meta.auctionState==='stopped')h+=`<div class="card" style="text-align:center;border-color:var(--bad)"><b style="color:var(--bad)">■ AUCTION STOPPED</b><div class="mut">The host has ended this auction.</div></div>`;
+ if(lot&&lot.auctionControl==='paused')h+=`<div class="card" style="text-align:center;border-color:var(--acc)"><b style="color:var(--acc)">Ⅱ AUCTION PAUSED BY HOST</b><div class="mut">The timer is frozen. Waiting for the host to resume.</div></div>`;
+ if(lot&&lot.auctionControl==='stopped')h+=`<div class="card" style="text-align:center;border-color:var(--bad)"><b style="color:var(--bad)">■ AUCTION STOPPED</b><div class="mut">The host has ended this auction.</div></div>`;
  if(p){const k=p.caps||{};h+=`<div class="card auction-player"><div>${avatar(p)}</div><div class="auction-player-info"><div><div class="row"><span class="tag">${esc(p.role)}</span>${p.country?`<span class="tag">${esc(p.country)}</span>`:''}<span class="tag">${overseas?'✈ OVERSEAS':(p.country?'DOMESTIC':'COUNTRY NOT SET')}</span>${p.set?`<span class="tag">Set ${esc(p.set)}</span>`:''}<span class="tag">OVR ${ovr(p)}</span><span class="tag">${esc(auctionSetName(p))}</span></div><h2 class="pn">${esc(p.name)}</h2><div class="auction-stats">${[['IPL',k.ipl],['T20I',k.t20],['ODI',k.odi],['TEST',k.test]].map(a=>`<div><small>${a[0]}</small><b>${a[1]||0}</b></div>`).join('')}</div></div><div><div class="auction-bidbar"><div><small class="mut">BASE PRICE · CURRENT BID</small><div class="auction-current-bid">${fmt(lot.bid)}</div><div>${currentTeam?`<span class="dot" style="background:${currentTeam.color}"></span> <b>${esc(currentTeam.name)}</b> is leading`:'<span class="mut">No bids yet</span>'}</div></div><div><small class="mut">TIME LEFT</small><div id="tm" class="auction-timer timer"></div></div></div>${blocked?`<div class="limit-warning">Overseas limit reached. Your team cannot bid on another overseas player.</div>`:''}${me&&nextBid()>left(me.id)?'<div class="limit-warning">Your remaining purse is too low for the next bid.</div>':''}${me&&squad(me.id).length>=S().maxSquad?'<div class="limit-warning">Your squad is full.</div>':''}</div></div></div>
  <div class="auction-actions">${live?'':`<div class="card" style="flex:1;margin:0"><b>${lot.status==='done'?(currentTeam?'SOLD TO '+esc(currentTeam.name)+' FOR '+fmt(lot.bid):'UNSOLD'):'Auction ready'}</b><div class="mut" style="margin-top:6px">${lot.status==='done'?'Next player starts automatically in 5 seconds.':'Waiting for the host to start the auction.'}</div></div>`}${host&&live?`<div class="host-actions"><button onclick="finish()">🔨 Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button></div>`:''}</div>`;
  }else h+=`<div class="card auction-empty"><div class="big">GULLY AUCTION</div><h2>Ready for the next player?</h2><p class="mut">The host can start the auction when everyone is ready.</p>${host?`<button class="pri" onclick="nextLot()">▶ Start first player (${remaining().length} left)</button>`:''}</div>`;
- h+=`</section><aside class="auction-side">${host?`<div class="card"><div class="row sp" style="margin-bottom:9px"><b>HOST CONTROLS</b><span class="tag">${meta&&meta.auctionState==='stopped'?'STOPPED':meta&&meta.auctionState==='paused'?'PAUSED':'LIVE'}</span></div><div class="auction-control-bar">${meta&&meta.auctionState==='paused'?`<button class="pri" onclick="resumeAuction()">▶ Resume</button>`:`<button class="pause-btn" onclick="pauseAuction()" ${meta&&meta.auctionState==='stopped'?'disabled':''}>Ⅱ Pause</button>`}<button class="stop-btn" onclick="stopAuction()" ${meta&&meta.auctionState==='stopped'?'disabled':''}>■ Stop auction</button></div><div class="auction-state-note">${meta&&meta.auctionState==='stopped'?'Auction ended for everyone.':meta&&meta.auctionState==='paused'?'Bidding and the auto-next countdown are frozen.':'Pause freezes the timer. Stop ends the auction permanently.'}</div></div>`:''}<div class="card"><div class="row sp" style="margin-bottom:10px"><b>FRANCHISE DASHBOARD</b><span class="tag">${cfg.teams.length} teams</span></div><div class="team-board">${teams}</div></div><div class="card"><div class="row sp" style="margin-bottom:10px"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div></aside></div>`;
+ h+=`</section><aside class="auction-side">${host?`<div class="card"><div class="row sp" style="margin-bottom:9px"><b>HOST CONTROLS</b><span class="tag">${stopped?'STOPPED':paused?'PAUSED':'LIVE'}</span></div><div class="auction-control-bar">${paused?`<button class="pri" onclick="resumeAuction()">▶ Resume</button>`:`<button class="pause-btn" onclick="pauseAuction()" ${stopped?'disabled':''}>Ⅱ Pause</button>`}<button class="stop-btn" onclick="stopAuction()" ${stopped?'disabled':''}>■ Stop auction</button></div><div class="auction-state-note">${stopped?'Auction ended for everyone.':paused?'Bidding and the auto-next countdown are frozen.':'Pause freezes the timer. Stop ends the auction permanently.'}</div></div>`:''}<div class="card"><div class="row sp" style="margin-bottom:10px"><b>FRANCHISE DASHBOARD</b><span class="tag">${cfg.teams.length} teams</span></div><div class="team-board">${teams}</div></div><div class="card"><div class="row sp" style="margin-bottom:10px"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div></aside></div>`;
  v.innerHTML=h;tick();
  paddleSync(live&&p?{color:me?me.color:'var(--acc)',code:me?paddleCode(me):'BID',action:me?(lot.team===me.id?'YOU ARE LEADING':'BID '+fmt(nextBid())):'JOIN A TEAM',sub:me?me.name+' PADDLE':'SELECT YOUR FRANCHISE',can:canBid}:null);
 }
@@ -399,7 +399,7 @@ const incFor=b=>b<1?.05:b<2?.1:b<5?.2:.25;
 function nextBid(){return lot.team?+(lot.bid+incFor(lot.bid)).toFixed(2):lot.bid}
 async function bid(){
  const me=mine();if(!me)return toast('Pick a team in the Teams tab first.');
- if(!lot||lot.status!=='bidding'||Date.now()>lot.endsAt)return;
+ if(!lot||lot.status!=='bidding'||lot.auctionControl==='paused'||lot.auctionControl==='stopped'||Date.now()>lot.endsAt)return;
  if(lot.team===me.id)return;
  const b=nextBid();if(b>left(me.id))return toast('Not enough purse.');if(isOverseas(ply(lot.pid))&&overseasCount(me.id)>=overseasLimit())return toast('Overseas limit reached: maximum '+overseasLimit()+' per team.');
  if(squad(me.id).length>=S().maxSquad)return toast('Your squad is full.');
@@ -407,26 +407,27 @@ async function bid(){
  try{await db.doc('live/lot').update({bid:b,team:me.id,endsAt:Math.max(lot.endsAt,Date.now()+S().reset*1000)})}catch(e){toast('Bid failed — check your connection.')}
 }
 async function pauseAuction(){
- if(!host||!meta||meta.auctionState==='stopped'||meta.auctionState==='paused')return;
- try{await db.doc('meta/room').update({auctionState:'paused',pausedAt:Date.now()});}
+ if(!host||!lot||lot.auctionControl==='stopped'||lot.auctionControl==='paused')return;
+ try{await db.doc('live/lot').update({auctionControl:'paused',pausedAt:Date.now()});}
  catch(e){toast('Could not pause auction: '+esc(e.message||e))}
 }
 async function resumeAuction(){
- if(!host||!meta||meta.auctionState!=='paused')return;
- const pausedFor=Math.max(0,Date.now()-(meta.pausedAt||Date.now()));
- try{
-  if(lot&&lot.status==='bidding')await db.doc('live/lot').update({endsAt:(lot.endsAt||Date.now())+pausedFor});
-  else if(lot&&lot.status==='done'&&lot.nextAt)await db.doc('live/lot').update({nextAt:lot.nextAt+pausedFor});
-  await db.doc('meta/room').update({auctionState:'running',pausedAt:null});
- }catch(e){toast('Could not resume auction: '+esc(e.message||e))}
+ if(!host||!lot||lot.auctionControl!=='paused')return;
+ const pausedFor=Math.max(0,Date.now()-(lot.pausedAt||Date.now()));
+ const patch={auctionControl:'running',pausedAt:null};
+ if(lot.status==='bidding')patch.endsAt=(lot.endsAt||Date.now())+pausedFor;
+ else if(lot.status==='done'&&lot.nextAt)patch.nextAt=lot.nextAt+pausedFor;
+ try{await db.doc('live/lot').update(patch)}
+ catch(e){toast('Could not resume auction: '+esc(e.message||e))}
 }
 async function stopAuction(){
- if(!host||!meta||meta.auctionState==='stopped')return;
+ if(!host||!lot||lot.auctionControl==='stopped')return;
  if(!confirm('Stop this auction for everyone? This will end the live auction and cannot be resumed.'))return;
- try{await db.doc('meta/room').update({auctionState:'stopped',stoppedAt:Date.now()});}
+ try{await db.doc('live/lot').update({auctionControl:'stopped',stoppedAt:Date.now()});}
  catch(e){toast('Could not stop auction: '+esc(e.message||e))}
 }
 async function nextLot(){
+ if(lot&&(lot.auctionControl==='paused'||lot.auctionControl==='stopped'))return;
  // Use the room's shared randomized order and the latest sold list.
  const cfgSnap=await db.doc('cfg/main').get();
  const latest=cfgSnap.exists?cfgSnap.data():cfg;
@@ -448,7 +449,7 @@ async function nextLot(){
  await db.doc('live/lot').set({pid:p.id,bid:p.base,team:null,status:'bidding',endsAt:Date.now()+S().timer*1000});
 }
 async function finish(unsold){
- if(!lot||lot.status!=='bidding')return;
+ if(!lot||lot.status!=='bidding'||lot.auctionControl==='paused'||lot.auctionControl==='stopped')return;
  const l=lot,key=l.pid+l.bid+l.endsAt;if(fin===key&&!unsold)return;fin=key;
  const t=unsold?null:l.team;
  if(t&&isOverseas(ply(l.pid))&&overseasCount(t)>=overseasLimit()){toast('Cannot sell: '+(team(t)?.name||'This team')+' has reached the overseas limit of '+overseasLimit()+'.');return}
@@ -458,6 +459,8 @@ async function finish(unsold){
 function tick(){
  const el=$('#tm');
  if(!lot)return;
+ if(lot.auctionControl==='paused'){if(el){el.textContent='PAUSED';el.className='timer'}return}
+ if(lot.auctionControl==='stopped'){if(el){el.textContent='STOPPED';el.className='timer'}return}
  if(lot.status==='done'){
   const wait=Math.max(0,(lot.nextAt||0)-Date.now());
   if(el){
