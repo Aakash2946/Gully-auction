@@ -206,6 +206,66 @@ body.teams-mode main{max-width:1500px}
 .auction-state-note{font-size:12px;color:var(--mut);margin-top:7px}
 
 @media(max-width:560px){.paddle-hint,.host-actions{grid-column:1/-1;margin-left:0}.host-actions{justify-content:stretch}.host-actions button{flex:1}}
+
+/* Mobile-first auction control: switch between panels instead of stacking three desktop columns */
+.mobile-auction-tabs{display:none}
+@media(max-width:760px){
+ body.auction-mode main{padding:8px 8px 90px;width:100%;max-width:100%;overflow-x:hidden}
+ body.auction-mode #nav{gap:5px;margin:0 0 8px}
+ body.auction-mode #nav button{padding:8px 11px;font-size:13px}
+ .auction-shell{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;min-height:0;width:100%}
+ .mobile-auction-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;position:sticky;top:0;z-index:12;padding:6px;background:var(--bg);border:1px solid var(--line);border-radius:12px}
+ .mobile-auction-tabs button{padding:10px 4px;font-size:12px;font-weight:800;white-space:normal;min-width:0}
+ .auction-left,.auction-right{display:none;position:static;max-height:none;overflow:visible;padding:0;min-width:0}
+ .auction-main{display:grid;grid-template-columns:minmax(0,1fr);gap:9px;min-width:0}
+ body.mobile-auction-panel-teams .auction-left{display:block}
+ body.mobile-auction-panel-teams .auction-main,body.mobile-auction-panel-teams .auction-right{display:none}
+ body.mobile-auction-panel-xi .auction-right{display:block}
+ body.mobile-auction-panel-xi .auction-main,body.mobile-auction-panel-xi .auction-left{display:none}
+ .auction-left .team-board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .auction-left .team-mini{padding:9px;min-width:0}
+ .auction-left .team-mini-head{align-items:flex-start}
+ .auction-left .team-mini-purse{font-size:14px}
+ .auction-left .team-mini-name{font-size:12px}
+ .auction-left .team-mini-meta .tag{font-size:9px}
+ .auction-player{grid-template-columns:minmax(0,1fr);gap:12px;padding:12px}
+ .auction-player .av{width:100%;height:auto;min-height:0;max-height:260px;aspect-ratio:16/9;font-size:42px}
+ .auction-player-info .pn{font-size:clamp(25px,7vw,34px);overflow-wrap:anywhere}
+ .auction-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+ .auction-stats>div{padding:7px 5px;min-width:0}
+ .auction-stats b{font-size:17px}
+ .auction-bidbar{gap:8px;margin-top:10px;padding-top:10px}
+ .auction-current-bid{font-size:clamp(34px,10vw,48px)}
+ .auction-timer{font-size:32px}
+ .auction-actions{display:flex;justify-content:center;gap:10px}
+ .auction-actions .bid-hero{width:148px;height:148px;flex-basis:148px;min-height:148px;padding:9px}
+ .auction-actions .bid-hero .paddle-mark{width:58px;height:58px;font-size:22px}
+ .auction-actions button:not(.bid-hero){min-height:46px;padding:9px 12px}
+ .host-actions{display:flex;gap:7px;width:100%}
+ .host-actions button{flex:1;min-width:0}
+ .auction-topline{padding:10px}
+ .auction-status{gap:6px;font-size:12px}
+ .xi-card{padding:10px!important}
+ .xi-slots{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .xi-slot{min-height:70px;padding:8px 5px}
+ .xi-slot b{font-size:12px}
+ .xi-slot small{font-size:10px}
+ .xi-bought{max-height:none;overflow:visible}
+ .xi-player{padding:11px;min-height:64px}
+ .xi-player b{font-size:14px}
+ .xi-player span,.xi-player small{font-size:11px}
+ .xi-note{font-size:11px}
+ .paddle-float{--ps:112px;left:10px;bottom:10px;z-index:14}
+ .paddle-float .paddle-mark{width:48px;height:48px;font-size:18px}
+ .paddle-float .paddle-action{font-size:12px}
+ .paddle-float .paddle-sub{font-size:9px}
+}
+@media(max-width:380px){
+ .auction-left .team-board{grid-template-columns:1fr}
+ .auction-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .auction-actions .bid-hero{width:132px;height:132px;flex-basis:132px;min-height:132px}
+ .mobile-auction-tabs button{font-size:11px}
+}
 </style></head><body>
 <header><h1>GULLY <span>AUCTION</span></h1>
 <div class="row"><input id="nm" placeholder="Your name" size="12"><select id="th" title="Theme"><option value="">Auto</option><option value="scoreboard">Scoreboard</option><option value="pavilion">Pavilion</option><option value="floodlight">Floodlight</option></select><span id="who" class="tag"></span><button id="gear" title="Host settings" style="display:none" onclick="tab='setup';render(true)">⚙</button></div></header>
@@ -454,6 +514,13 @@ function placeXISlot(index){
  if(selected&&isOverseas(selected)&&overseasInXI>=4)return toast('Starting XI limit reached: maximum 4 overseas players. Remove an overseas player before adding another.');
  slots[index]=xiPending;saveXI(me.id,slots);xiPending=null;render(true);
 }
+function setMobileAuctionPanel(panel){
+ const allowed=['auction','teams','xi'];if(!allowed.includes(panel))panel='auction';
+ document.body.classList.remove('mobile-auction-panel-teams','mobile-auction-panel-xi');
+ if(panel==='teams')document.body.classList.add('mobile-auction-panel-teams');
+ if(panel==='xi')document.body.classList.add('mobile-auction-panel-xi');
+ document.querySelectorAll('.mobile-auction-tabs button').forEach(b=>b.classList.toggle('on',b.dataset.panel===panel));
+}
 function rAuction(v){
  document.body.classList.add('auction-mode');
  const me=mine(),p=lot&&ply(lot.pid),paused=!!(lot&&lot.auctionControl==='paused'),stopped=!!(lot&&lot.auctionControl==='stopped'),live=lot&&lot.status==='bidding'&&!paused&&!stopped;let h='';
@@ -478,6 +545,7 @@ function rAuction(v){
   </button>`}).join('');
  const recent=Object.entries(sold).map(([id,s])=>({id,...s,p:ply(id),t:team(s.team)})).filter(x=>x.p&&x.t).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,5);
  h+=`<div class="auction-shell">
+ <div class="mobile-auction-tabs" aria-label="Auction panels"><button class="on" data-panel="auction" onclick="setMobileAuctionPanel('auction')">🏏 Auction</button><button data-panel="teams" onclick="setMobileAuctionPanel('teams')">🏆 Teams</button><button data-panel="xi" onclick="setMobileAuctionPanel('xi')">📋 Starting XI</button></div>
  <aside class="auction-left"><div class="card left-dashboard"><div class="row sp" style="margin-bottom:9px"><b>FRANCHISES</b><span class="tag">10 teams</span></div><div class="team-board">${leftTeams}</div></div></aside>
  <section class="auction-main">
  ${host?`<div class="card host-controls-card"><div class="row sp" style="margin-bottom:9px"><b>HOST CONTROLS</b><span class="tag">${stopped?'STOPPED':paused?'PAUSED':'LIVE'}</span></div><div class="auction-control-bar">${paused?`<button class="pri" onclick="resumeAuction()">▶ Resume</button>`:`<button class="pause-btn" onclick="pauseAuction()" ${stopped?'disabled':''}>Ⅱ Pause</button>`}<button class="stop-btn" onclick="stopAuction()" ${stopped?'disabled':''}>■ Stop auction</button></div><div class="auction-state-note">${stopped?'Auction ended for everyone.':paused?'Bidding and the auto-next countdown are frozen.':'Pause freezes the timer. Stop ends the auction permanently.'}</div></div>`:''}
