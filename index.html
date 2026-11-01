@@ -119,6 +119,8 @@ const S=()=>cfg&&cfg.settings||SAMPLE.settings;
 const ply=id=>cfg&&cfg.players.find(p=>p.id===id);
 function auctionSetName(p){
  const explicit=String(p.auctionSet||p.set||'').trim();
+ // Marquee players (flag marquee:true, or a set name containing "marquee") form the opening set(s)
+ if(p.marquee===true)return /marquee/i.test(explicit)?explicit:'Marquee Set';
  if(explicit)return explicit;
  const role=String(p.role||'OTHER').toUpperCase();
  const roleName=({BAT:'Batters',AR:'All-rounders',WK:'Wicketkeepers',BOWL:'Bowlers'})[role]||'Other players';
@@ -139,13 +141,11 @@ function buildAuctionOrder(players){
   if(!groups.has(name))groups.set(name,[]);
   groups.get(name).push(p.id);
  });
- const roleOrder=['Capped Batters','Capped All-rounders','Capped Wicketkeepers','Capped Bowlers',
-  'Uncapped Batters','Uncapped All-rounders','Uncapped Wicketkeepers','Uncapped Bowlers','Other players'];
- const names=[...groups.keys()].sort((a,b)=>{
-  const ai=roleOrder.indexOf(a),bi=roleOrder.indexOf(b);
-  if(ai<0&&bi<0)return a.localeCompare(b);
-  if(ai<0)return 1;if(bi<0)return -1;return ai-bi;
- });
+ // Fixed set order: Marquee first, then Capped (batters, bowlers, all-rounders, keepers), then Uncapped in the same order
+ const roleOrder=['Capped Batters','Capped Bowlers','Capped All-rounders','Capped Wicketkeepers',
+  'Uncapped Batters','Uncapped Bowlers','Uncapped All-rounders','Uncapped Wicketkeepers','Other players'];
+ const setRank=n=>/marquee/i.test(n)?0:(roleOrder.indexOf(n)<0?999:roleOrder.indexOf(n)+1);
+ const names=[...groups.keys()].sort((a,b)=>setRank(a)-setRank(b)||a.localeCompare(b,undefined,{numeric:true}));
  const order=[];
  names.forEach(name=>shuffled(groups.get(name)).forEach(id=>order.push(id)));
  return {order,sets:names.map(name=>({name,ids:groups.get(name)}))};
@@ -277,9 +277,10 @@ async function nextLot(){
  const cfgSnap=await db.doc('cfg/main').get();
  const latest=cfgSnap.exists?cfgSnap.data():cfg;
  if(!latest||!Array.isArray(latest.players))return toast('Auction player list is missing.');
- let order=Array.isArray(latest.auctionOrder)?latest.auctionOrder.filter(id=>latest.players.some(p=>p.id===id)):[];
- if(order.length!==latest.players.length){
-  const plan=buildAuctionOrder(latest.players);
+ const pool=latest.players.filter(p=>!p.retained);
+ let order=Array.isArray(latest.auctionOrder)?latest.auctionOrder.filter(id=>pool.some(p=>p.id===id)):[];
+ if(order.length!==pool.length){
+  const plan=buildAuctionOrder(pool);
   order=plan.order;
   await db.doc('cfg/main').update({auctionOrder:order,auctionSets:plan.sets});
   latest.auctionOrder=order;latest.auctionSets=plan.sets;cfg=latest;
