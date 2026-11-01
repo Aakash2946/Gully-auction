@@ -162,6 +162,21 @@ function shuffled(list){
  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}
  return a;
 }
+function isCappedPlayer(p){const caps=p.caps||{};return p.capped===true||Object.values(caps).some(v=>Number(v)>0)||Number(p.iplMatches||p.ipl||0)>0}
+// Works out what a set is (marquee / capped / role) from its name (e.g. "BA1", "UAL2", "Capped Bowlers") or, failing that, from its players
+function setMeta(name,members){
+ const n=String(name||'').trim();
+ const marquee=/marquee/i.test(n)||/^m\d+$/i.test(n)||members.some(p=>p.marquee===true);
+ let capped,role;
+ const code=n.match(/^(u?)(ba|al|ar|wk|fa|sp)\s*\d*$/i);
+ if(code){capped=!code[1];role={ba:'BAT',al:'AR',ar:'AR',wk:'WK',fa:'BOWL',sp:'BOWL'}[code[2].toLowerCase()]}
+ if(capped===undefined){if(/uncapped/i.test(n))capped=false;else if(/capped/i.test(n))capped=true}
+ if(!role){if(/all.?round/i.test(n))role='AR';else if(/keeper|wicket|\bwk\b/i.test(n))role='WK';else if(/bowl|spin|pace|fast/i.test(n))role='BOWL';else if(/bat/i.test(n))role='BAT'}
+ if(capped===undefined)capped=members.length>0&&members.filter(isCappedPlayer).length*2>=members.length;
+ if(!role){const c={};members.forEach(p=>{const r=String(p.role||'OTHER').toUpperCase();c[r]=(c[r]||0)+1});role=Object.keys(c).sort((a,b)=>c[b]-c[a])[0]}
+ const rr={BAT:0,BOWL:1,AR:2,WK:3}[role];
+ return{marquee,capped,rr:rr===undefined?4:rr}
+}
 function buildAuctionOrder(players){
  const groups=new Map();
  (players||[]).forEach(p=>{
@@ -170,10 +185,13 @@ function buildAuctionOrder(players){
   groups.get(name).push(p.id);
  });
  // Fixed set order: Marquee first, then Capped (batters, bowlers, all-rounders, keepers), then Uncapped in the same order
- const roleOrder=['Capped Batters','Capped Bowlers','Capped All-rounders','Capped Wicketkeepers',
-  'Uncapped Batters','Uncapped Bowlers','Uncapped All-rounders','Uncapped Wicketkeepers','Other players'];
- const setRank=n=>/marquee/i.test(n)?0:(roleOrder.indexOf(n)<0?999:roleOrder.indexOf(n)+1);
- const names=[...groups.keys()].sort((a,b)=>setRank(a)-setRank(b)||a.localeCompare(b,undefined,{numeric:true}));
+ const byId=new Map((players||[]).map(p=>[p.id,p]));
+ const meta=new Map([...groups].map(([n,ids])=>[n,setMeta(n,ids.map(id=>byId.get(id)).filter(Boolean))]));
+ const names=[...groups.keys()].sort((a,b)=>{
+  const x=meta.get(a),y=meta.get(b),byName=a.localeCompare(b,undefined,{numeric:true});
+  if(x.marquee&&y.marquee)return byName;
+  return (x.marquee?0:1)-(y.marquee?0:1)||(x.capped?0:1)-(y.capped?0:1)||x.rr-y.rr||byName;
+ });
  const order=[];
  names.forEach(name=>shuffled(groups.get(name)).forEach(id=>order.push(id)));
  return {order,sets:names.map(name=>({name,ids:groups.get(name)}))};
