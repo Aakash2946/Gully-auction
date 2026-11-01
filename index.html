@@ -419,8 +419,17 @@ function getXI(t){
  try{
   const saved=JSON.parse(localStorage.getItem(xiKey(t))||'[]');
   // Upgrade the earlier compact list format into eleven explicit positions.
-  if(Array.isArray(saved)&&saved.some(x=>typeof x==='string'))return [...saved.slice(0,11),...Array(Math.max(0,11-saved.length)).fill(null)];
-  return Array.isArray(saved)?[...saved.slice(0,11),...Array(Math.max(0,11-saved.length)).fill(null)]:Array(11).fill(null);
+  let slots=Array.isArray(saved)?[...saved.slice(0,11),...Array(Math.max(0,11-saved.length)).fill(null)]:Array(11).fill(null);
+  // IPL playing XI rule: maximum four overseas players. Keep the first four in slot order.
+  let overseas=0,changed=false;
+  slots=slots.map(id=>{
+   if(!id)return null;
+   const player=ply(id);
+   if(player&&isOverseas(player)){overseas++;if(overseas>4){changed=true;return null;}}
+   return id;
+  });
+  if(changed)saveXI(t,slots);
+  return slots;
  }catch(e){return Array(11).fill(null)}
 }
 function saveXI(t,slots){try{localStorage.setItem(xiKey(t),JSON.stringify(slots))}catch(e){}}
@@ -440,6 +449,9 @@ function placeXISlot(index){
  if(slots[index]){slots[index]=null;saveXI(me.id,slots);xiPending=null;render(true);return;}
  if(!xiPending)return toast('First select a bought player, then choose an empty Starting XI slot.');
  if(slots.includes(xiPending))return toast('That player is already in your Starting XI.');
+ const selected=ply(xiPending);
+ const overseasInXI=slots.filter(id=>id&&isOverseas(ply(id))).length;
+ if(selected&&isOverseas(selected)&&overseasInXI>=4)return toast('Starting XI limit reached: maximum 4 overseas players. Remove an overseas player before adding another.');
  slots[index]=xiPending;saveXI(me.id,slots);xiPending=null;render(true);
 }
 function rAuction(v){
@@ -458,6 +470,7 @@ function rAuction(v){
  const myPicks=me?teamPicks(me.id).map(x=>x.p):[];
  const xiSlotsData=me?getXI(me.id):Array(11).fill(null);
  const xi=xiSlotsData.filter(id=>id&&myPicks.some(x=>x.id===id));
+ const xiOverseas=xi.filter(id=>isOverseas(myPicks.find(x=>x.id===id))).length;
  const xiSlots=XI_SLOTS.map((slot,i)=>{
   const player=myPicks.find(x=>x.id===xiSlotsData[i]);
   return `<button class="xi-slot ${player?'filled':''} ${!player&&xiPending?'target':''}" onclick="placeXISlot(${i})">
@@ -476,7 +489,7 @@ function rAuction(v){
  }else h+=`<div class="card auction-empty"><div class="big">GULLY AUCTION</div><h2>Ready for the next player?</h2><p class="mut">The host can start the auction when everyone is ready.</p>${host&&!stopped?`<button class="pri" onclick="nextLot()">▶ Start first player (${remaining().length} left)</button>`:''}</div>`;
  h+=`<div class="card recent-compact"><div class="row sp"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div>
  </section>
- <aside class="auction-right"><div class="card xi-card"><div class="row sp"><b>STARTING XI</b><span class="tag">${xi.length}/11</span></div>${me?`<div class="mut xi-team-label">${esc(me.name)} · select a bought player, then choose their slot</div><div class="xi-pitch"><div class="xi-slots">${xiSlots}</div></div><div class="xi-bought-head"><b>YOUR BOUGHT PLAYERS</b><span class="tag">${myPicks.length} players</span></div><div class="xi-bought">${myPicks.map(x=>`<button class="xi-player ${xi.includes(x.id)?'selected':''} ${xiPending===x.id?'pending':''}" onclick="selectXIPlayer('${x.id}')"><b>${esc(x.name)}</b><span>${esc(x.role||'PLAYER')} · ${fmt(Object.values(sold).find(z=>z.team===me.id&&ply(x.id)?.id===x.id)?.price||0)}</span>${xi.includes(x.id)?'<small>✓ IN XI · click to remove</small>':xiPending===x.id?'<small>✓ SELECTED · NOW CHOOSE A SLOT</small>':'<small>＋ SELECT PLAYER</small>'}</button>`).join('')||'<div class="mut">Players you buy will appear here.</div>'}</div><div class="xi-note">Select a bought player first, then click the exact empty slot you want. Click an occupied slot or an XI player to remove them.</div>`:'<div class="xi-empty">Choose a franchise in the Teams tab to build its starting XI.</div>'}</div></aside></div>`;
+ <aside class="auction-right"><div class="card xi-card"><div class="row sp"><b>STARTING XI</b><span class="tag">${xi.length}/11 · ✈ ${xiOverseas}/4</span></div>${me?`<div class="mut xi-team-label">${esc(me.name)} · select a bought player, then choose their slot</div><div class="xi-pitch"><div class="xi-slots">${xiSlots}</div></div><div class="xi-bought-head"><b>YOUR BOUGHT PLAYERS</b><span class="tag">${myPicks.length} players</span></div><div class="xi-bought">${myPicks.map(x=>`<button class="xi-player ${xi.includes(x.id)?'selected':''} ${xiPending===x.id?'pending':''}" onclick="selectXIPlayer('${x.id}')"><b>${esc(x.name)}</b><span>${esc(x.role||'PLAYER')} · ${fmt(Object.values(sold).find(z=>z.team===me.id&&ply(x.id)?.id===x.id)?.price||0)}</span>${xi.includes(x.id)?'<small>✓ IN XI · click to remove</small>':xiPending===x.id?'<small>✓ SELECTED · NOW CHOOSE A SLOT</small>':'<small>＋ SELECT PLAYER</small>'}</button>`).join('')||'<div class="mut">Players you buy will appear here.</div>'}</div><div class="xi-note">Select a bought player first, then click the exact empty slot you want. Click an occupied slot or an XI player to remove them.</div>`:'<div class="xi-empty">Choose a franchise in the Teams tab to build its starting XI.</div>'}</div></aside></div>`;
  v.innerHTML=h;tick();
  paddleSync(live&&p?{color:me?me.color:'var(--acc)',code:me?paddleCode(me):'BID',action:me?(lot.team===me.id?'YOU ARE LEADING':'BID '+fmt(nextBid())):'JOIN A TEAM',sub:me?me.name+' PADDLE':'SELECT YOUR FRANCHISE',can:canBid}:null);
 }
