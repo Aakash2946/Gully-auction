@@ -214,9 +214,16 @@ async function bid(){
  try{await db.doc('live/lot').update({bid:b,team:me.id,endsAt:Math.max(lot.endsAt,Date.now()+S().reset*1000)})}catch(e){toast('Bid failed — check your connection.')}
 }
 async function nextLot(){
- const r=remaining();if(!r.length)return toast('All players are done.');
- const p=r[0];
- await db.doc('live/lot').set({pid:p.id,bid:p.base,team:null,status:'bidding',endsAt:Date.now()+S().timer*1000});
+ // Read sold players directly from Firestore so a delayed onSnapshot cannot
+ // make the previous player appear available again.
+ const soldSnap=await db.collection('sold').get();
+ const alreadySold=new Set(soldSnap.docs.map(d=>d.id));
+ const p=cfg.players.find(player=>!alreadySold.has(player.id));
+ if(!p){toast('All players are done.');return}
+ await db.doc('live/lot').set({
+  pid:p.id,bid:p.base,team:null,status:'bidding',
+  endsAt:Date.now()+S().timer*1000
+ });
 }
 async function finish(unsold){
  if(!lot||lot.status!=='bidding')return;
@@ -227,17 +234,25 @@ async function finish(unsold){
  await db.doc('live/lot').set({...l,team:t,status:'done',nextAt:Date.now()+5000});
 }
 function tick(){
- const el=$('#tm');if(!el||!lot)return;
+ const el=$('#tm');
+ if(!lot)return;
  if(lot.status==='done'){
   const wait=Math.max(0,(lot.nextAt||0)-Date.now());
-  el.textContent=wait>0?'NEXT '+Math.ceil(wait/1000)+'s':'';
-  el.className='timer';
-  if(host&&lot.nextAt&&wait===0&&autoNextKey!==lot.pid){
-   autoNextKey=lot.pid;
-   nextLot().catch(e=>{autoNextKey='';toast('Could not start next player. The host can retry.');});
+  if(el){
+   el.textContent=lot.nextAt?(wait>0?'NEXT '+Math.ceil(wait/1000)+'s':'STARTING NEXT PLAYER…'):'';
+   el.className='timer';
+  }
+  const transitionKey=lot.pid+':'+(lot.nextAt||'');
+  if(host&&lot.nextAt&&wait===0&&autoNextKey!==transitionKey){
+   autoNextKey=transitionKey;
+   nextLot().catch(e=>{
+    autoNextKey='';
+    toast('Auto-next failed: '+esc(e.message||e));
+   });
   }
   return;
  }
+ if(!el)return;
  if(lot.status!=='bidding'){el.textContent='';return}
  const s=Math.max(0,Math.ceil((lot.endsAt-Date.now())/1000));
  if(s<=3&&s>0&&s!==lastS)sfx.tick();lastS=s;el.textContent=s+'s';el.className='timer'+(s<=5?' lowt':'');
