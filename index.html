@@ -92,6 +92,34 @@ button.bid-hero:disabled{opacity:.55;filter:grayscale(.45);box-shadow:none}
 @media(max-width:900px){body.auction-mode main{padding:10px}.auction-shell{grid-template-columns:1fr}.auction-side{position:static;max-height:none;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}}
 @media(max-width:560px){.auction-player{grid-template-columns:105px minmax(0,1fr);gap:12px;padding:12px}.auction-player .av{min-height:170px;font-size:32px}.auction-player-info .pn{font-size:25px}.auction-stats{grid-template-columns:repeat(2,minmax(55px,1fr))}.auction-bidbar{margin-top:10px}.auction-actions{display:grid;grid-template-columns:1fr 1fr}.auction-actions .bid-hero{grid-column:1/-1;justify-self:center;width: min(100%,210px);height:210px;flex-basis:210px}.auction-timer{font-size:32px}}
 
+/* Teams tab: franchise cards split by role */
+body.teams-mode main{max-width:1500px}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr));gap:16px}
+.tcard{border:1px solid var(--line);border-top:5px solid var(--team);border-radius:18px;padding:18px;background:linear-gradient(180deg,color-mix(in srgb,var(--team) 14%,var(--card)),var(--card) 170px);box-shadow:0 8px 24px #0004}
+.tcard.mine{box-shadow:0 0 0 2px var(--acc),0 8px 24px #0004}
+.tcard-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.tcard-name{font:900 28px/1.1 system-ui,sans-serif;display:flex;align-items:center;gap:10px}
+.tcard-name .dot{width:16px;height:16px;background:var(--team);box-shadow:0 0 12px var(--team)}
+.tcard-purse{text-align:right}.tcard-purse small{display:block;color:var(--mut);font-size:10px;letter-spacing:1.5px}
+.tcard-purse b{font:900 30px/1 "Courier New",ui-monospace,monospace;color:var(--acc2);text-shadow:0 0 14px var(--glow)}
+.pbar{height:7px;border-radius:99px;background:var(--bg);margin:12px 0;overflow:hidden;border:1px solid var(--line)}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,var(--team),var(--acc2))}
+.tstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.tstats>div{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.tstats small{display:block;color:var(--mut);font-size:10px;letter-spacing:1px}.tstats b{font-size:18px}
+.rgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.rsec{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--rc);border-radius:12px;padding:10px;min-height:150px}
+.rsec-h{display:flex;justify-content:space-between;align-items:center;font-weight:800;letter-spacing:.5px;margin-bottom:6px}
+.rsec-empty{color:var(--mut);font-size:12px;padding:20px 6px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+.prow{display:flex;align-items:center;gap:10px;padding:6px;border-radius:10px;border:1px solid transparent}
+.prow:hover{background:var(--card);border-color:var(--line)}
+.mav{flex:0 0 38px;width:38px}.mav .av{font-size:13px;border-radius:9px}
+.prow-i{flex:1;min-width:0}.prow-i b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prow-t{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}.prow-t .tag{font-size:10px;padding:1px 6px}
+.tag.rt{color:var(--acc2);border-color:var(--acc2)}
+.prow-p{font:800 14px "Courier New",ui-monospace,monospace;color:var(--acc2);white-space:nowrap}
+.tcard-a{margin-top:14px}
+@media(max-width:560px){.rsec{min-height:0}.rgrid{grid-template-columns:1fr}.tstats{grid-template-columns:repeat(2,1fr)}.tcard-name{font-size:22px}}
 </style></head><body>
 <header><h1>GULLY <span>AUCTION</span></h1>
 <div class="row"><input id="nm" placeholder="Your name" size="12"><select id="th" title="Theme"><option value="">Auto</option><option value="scoreboard">Scoreboard</option><option value="pavilion">Pavilion</option><option value="floodlight">Floodlight</option></select><span id="who" class="tag"></span><button id="gear" title="Host settings" style="display:none" onclick="tab='setup';render(true)">⚙</button></div></header>
@@ -236,6 +264,7 @@ function nav(){
 }
 function render(force){
  if(tab!=='auction')document.body.classList.remove('auction-mode');
+ document.body.classList.toggle('teams-mode',tab==='teams');
  if(tab==='setup'&&!host)tab='auction';
  nav();const v=$('#view');
  if(!room){$('#nav').innerHTML='';landing(v);return}
@@ -326,16 +355,27 @@ function tick(){
  if(s<=3&&s>0&&s!==lastS)sfx.tick();lastS=s;el.textContent=s+'s';el.className='timer'+(s<=5?' lowt':'');
  if(s===0&&Date.now()>lot.endsAt+600)finish();
 }
+const ROLES=[['BAT','Batters','🏏'],['BOWL','Bowlers','🎯'],['AR','All-rounders','⚡'],['WK','Wicketkeepers','🧤']];
 function rTeams(v){
- const me=mine();
- v.innerHTML='<div class="grid">'+cfg.teams.map(t=>{const o=owners[t.id],sq=squad(t.id);
-  return `<div class="card" style="border-top:4px solid ${t.color}"><div class="row sp"><b>${esc(t.name)}</b>${o?`<span class="tag">${esc(o.name||'Player')}</span>`:''}</div>
-  <div class="mut">Purse ${fmt(left(t.id))} · ${sq.length}/${S().maxSquad}</div>
-  ${(cfg.retentionAdjustments&&cfg.retentionAdjustments[t.id])?`<div class="mut" style="font-size:11px">Official retention-slab adjustment: ${fmt(cfg.retentionAdjustments[t.id])}</div>`:''}
-  <div style="margin:8px 0">${sq.map(s=>{const p=ply(Object.keys(sold).find(k=>sold[k]===s));return p?`<div class="row sp pl" onclick="stats('${p.id}')"><span>${esc(p.name)} <span class="tag">${esc(p.role)}</span>${s.retained?'<span class="tag">RETAINED 2025</span>':''}</span><span>${fmt(s.price)}</span></div>`:''}).join('')||'<span class="mut">No players yet</span>'}</div>
-  ${!o&&!me?`<button class="pri" onclick="claim('${t.id}')">Join this team</button>`:''}
-  ${o&&o.uid===uid?`<button class="warn" onclick="release('${t.id}')">Leave</button>`:''}
-  ${host&&o&&o.uid!==uid?`<button class="warn" onclick="release('${t.id}')">Remove owner</button>`:''}</div>`}).join('')+'</div>';
+ const me=mine(),total=+S().purse||1;
+ const prow=x=>{const p=x.p,os=isOverseas(p);
+  return `<div class="prow pl" onclick="stats('${p.id}')"><div class="mav">${avatar(p)}</div><div class="prow-i"><b>${esc(p.name)}</b><div class="prow-t">${x.s.retained?'<span class="tag rt">RETAINED</span>':''}${os?'<span class="tag">✈ '+esc(p.country||'Overseas')+'</span>':''}<span class="tag">OVR ${ovr(p)}</span></div></div><div class="prow-p">${fmt(x.s.price)}</div></div>`};
+ const sec=(k,label,ic,list)=>`<div class="rsec" style="--rc:${RC[k]||'#888'}"><div class="rsec-h"><span>${ic} ${label}</span><span class="tag">${list.length}</span></div>${list.map(prow).join('')||'<div class="rsec-empty">No '+label.toLowerCase()+' yet</div>'}</div>`;
+ v.innerHTML='<div class="tgrid">'+cfg.teams.map(t=>{
+  const o=owners[t.id],isMine=me&&me.id===t.id;
+  const roster=Object.entries(sold).filter(([id,s])=>s.team===t.id&&ply(id)).map(([id,s])=>({p:ply(id),s})).sort((a,b)=>b.s.price-a.s.price);
+  const lf=left(t.id),sp=spent(t.id),pct=Math.max(0,Math.min(100,lf/total*100));
+  const adj=cfg.retentionAdjustments?Number(cfg.retentionAdjustments[t.id]||0):0;
+  const known=ROLES.map(r=>r[0]),others=roster.filter(x=>!known.includes(x.p.role));
+  const sections=ROLES.map(([k,label,ic])=>sec(k,label,ic,roster.filter(x=>x.p.role===k))).join('')+(others.length?sec('?','Others','👤',others):'');
+  const btn=!o&&!me?`<button class="pri" onclick="claim('${t.id}')">Join this team</button>`:o&&o.uid===uid?`<button class="warn" onclick="release('${t.id}')">Leave</button>`:host&&o&&o.uid!==uid?`<button class="warn" onclick="release('${t.id}')">Remove owner</button>`:'';
+  return `<div class="tcard ${isMine?'mine':''}" style="--team:${t.color}">
+  <div class="tcard-h"><div><div class="tcard-name"><span class="dot"></span>${esc(t.name)}${isMine?' <span class="tag">YOU</span>':''}</div><div class="mut" style="margin-top:4px">${o?'Managed by <b>'+esc(o.name||'Player')+'</b>':'Unclaimed franchise'}</div></div><div class="tcard-purse"><small>PURSE LEFT</small><b>${fmt(lf)}</b></div></div>
+  <div class="pbar"><i style="width:${pct}%"></i></div>
+  <div class="tstats"><div><small>SQUAD</small><b>${roster.length}/${S().maxSquad}</b></div><div><small>OVERSEAS</small><b>✈ ${overseasCount(t.id)}/${overseasLimit()}</b></div><div><small>SPENT</small><b>${fmt(sp)}</b></div><div><small>RETAINED</small><b>${roster.filter(x=>x.s.retained).length}</b></div></div>
+  ${adj?`<div class="mut" style="font-size:11px;margin:-4px 0 10px">Includes official retention-slab adjustment of ${fmt(adj)}</div>`:''}
+  <div class="rgrid">${sections}</div>
+  ${btn?`<div class="row tcard-a">${btn}</div>`:''}</div>`}).join('')+'</div>';
 }
 async function claim(id){
  if(!uid)return toast('Sign in to join a team.');
