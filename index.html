@@ -68,6 +68,7 @@ button.bid-hero:active{transform:translateY(2px);box-shadow:0 2px 0 color-mix(in
 .auction-actions{align-items:center;justify-content:flex-start;gap:14px}
 button.bid-hero{flex:0 0 clamp(170px,22vw,230px);width:clamp(170px,22vw,230px);height:clamp(170px,22vw,230px);min-height:0;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;border:3px solid color-mix(in srgb,var(--paddle-color,var(--acc)) 72%,#fff);border-radius:22px;background:radial-gradient(circle at 50% 25%,color-mix(in srgb,var(--paddle-color,var(--acc)) 88%,#fff),var(--paddle-color,var(--acc)) 65%,color-mix(in srgb,var(--paddle-color,var(--acc)) 65%,#000));color:#fff;text-shadow:0 2px 5px #0009;box-shadow:0 7px 0 color-mix(in srgb,var(--paddle-color,var(--acc)) 55%,#000),0 0 28px color-mix(in srgb,var(--paddle-color,var(--acc)) 45%,transparent);white-space:normal}
 .paddle-mark{width:88px;height:88px;border:3px solid #ffffffc9;border-radius:50%;display:grid;place-items:center;background:#0002;font:1000 30px/1 'Arial Black',system-ui,sans-serif;letter-spacing:-1px;box-shadow:inset 0 0 0 5px #ffffff25,0 4px 12px #0004}
+.paddle-logo{width:calc(var(--ps)*.56);height:calc(var(--ps)*.56);max-width:104px;max-height:104px;object-fit:contain;filter:drop-shadow(0 3px 5px #0008)}
 .paddle-action{font-size:clamp(15px,1.5vw,19px);font-weight:1000;letter-spacing:1.2px;text-align:center}
 .paddle-sub{font-size:11px;font-weight:800;letter-spacing:1.4px;opacity:.9;text-align:center}
 button.bid-hero:disabled{opacity:.55;filter:grayscale(.45);box-shadow:none}
@@ -194,6 +195,7 @@ body.teams-mode main{max-width:1500px}
 .paddle-float.drag{cursor:grabbing;transform:scale(1.05) rotate(-2deg);box-shadow:0 20px 44px #000b,0 0 34px color-mix(in srgb,var(--paddle-color,var(--acc)) 55%,transparent)}
 .paddle-float.off{opacity:.6;filter:grayscale(.45)}
 .paddle-float .paddle-mark{width:calc(var(--ps)*.44);height:calc(var(--ps)*.44);font-size:calc(var(--ps)*.15)}
+.paddle-float .paddle-logo{width:calc(var(--ps)*.58);height:calc(var(--ps)*.58)}
 .paddle-float .paddle-action{font-size:clamp(12px,calc(var(--ps)*.1),19px)}
 .paddle-grip{position:absolute;top:6px;left:0;right:0;text-align:center;font-size:9px;letter-spacing:2px;opacity:.7}
 .paddle-hint{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
@@ -258,7 +260,7 @@ body.teams-mode main{max-width:1500px}
  .paddle-float{--ps:112px;left:10px;bottom:10px;z-index:14}
  .paddle-float .paddle-mark{width:48px;height:48px;font-size:18px}
  .paddle-float .paddle-action{font-size:12px}
- .paddle-float .paddle-sub{font-size:9px}
+ .paddle-float .paddle-sub{display:none}
 }
 @media(max-width:380px){
  .auction-left .team-board{grid-template-columns:1fr}
@@ -468,7 +470,7 @@ function paddleSync(st){
  if(!st){if(el)el.style.display='none';return}
  if(!el){el=document.createElement('div');el.id='paddle';el.className='paddle-float';el.setAttribute('role','button');el.tabIndex=0;document.body.appendChild(el);pdBind(el)}
  el.style.display='';el.style.setProperty('--paddle-color',st.color);el.classList.toggle('off',!st.can);
- el.innerHTML=`<span class="paddle-grip">⠿ DRAG ⠿</span><span class="paddle-mark">${esc(st.code)}</span><span class="paddle-action">${esc(st.action)}</span><span class="paddle-sub">${esc(st.sub)}</span>`;
+ el.innerHTML=`<span class="paddle-grip">⠿ DRAG ⠿</span><img class="paddle-logo" src="Logos/${esc(st.code)}.png" alt="${esc(st.code)} logo" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'paddle-mark',textContent:'${esc(st.code)}'}))"><span class="paddle-action">${esc(st.action)}</span>`;
  pdApply(el);
 }
 addEventListener('resize',()=>{const el=$('#paddle');if(el&&pdPos)pdApply(el)});
