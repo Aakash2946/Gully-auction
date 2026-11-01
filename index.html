@@ -80,7 +80,7 @@ button.bid-hero:disabled{opacity:.55;filter:grayscale(.45);box-shadow:none}
 .team-mini.mine-team{box-shadow:inset 0 0 0 1px var(--acc)}
 .team-mini.leading-team{background:color-mix(in srgb,var(--team) 13%,var(--bg))}
 .team-mini-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.team-mini-name{font-weight:850;display:flex;align-items:center;gap:7px}
+.team-mini-name{font-weight:850;display:flex;align-items:center;gap:7px;min-width:0}.team-mini-name .tlogo{width:28px!important;height:28px!important;flex:0 0 28px!important}.tcard-name .tlogo{width:34px!important;height:34px!important;flex:0 0 34px!important}.ftile-logo .tlogo{max-width:100%;max-height:100%}
 .team-mini-purse{font:800 18px 'Courier New',monospace;color:var(--acc2);white-space:nowrap}
 .team-mini-meta{display:flex;gap:6px;flex-wrap:wrap;margin:5px 0}
 .team-mini-picks{font-size:12px;color:var(--mut);line-height:1.5}
@@ -397,8 +397,8 @@ const TEAM_INFO={CSK:['Chennai Super Kings','Chennai','M. A. Chidambaram Stadium
 // Logos are read from logos/<CODE>.png (then .svg/.webp/.jpg); if none exist a crest in the team colours is drawn instead
 const LOGO_EXT=['png','svg','webp','jpg'];
 function crest(color,abbr,size){return `<div class="crest" style="--team:${color};--s:${size}px"><div class="crest-in"><span>${esc(abbr)}</span></div></div>`}
-function teamLogo(t,size){const a=paddleCode(t);return `<img class="tlogo" style="width:${size}px;height:${size}px" src="logos/${esc(a)}.png" alt="${esc(t.name)}" data-a="${esc(a)}" data-i="0" data-c="${esc(t.color)}" data-s="${size}" onerror="logoFail(this)">`}
-function logoFail(img){const i=+img.dataset.i+1;if(i<LOGO_EXT.length){img.dataset.i=i;img.src='logos/'+img.dataset.a+'.'+LOGO_EXT[i];return}
+function teamLogo(t,size){const a=paddleCode(t);return `<img class="tlogo" style="width:${size}px;height:${size}px" src="Logos/${esc(a)}.png" alt="${esc(t.name)}" data-a="${esc(a)}" data-i="0" data-c="${esc(t.color)}" data-s="${size}" onerror="logoFail(this)">`}
+function logoFail(img){const i=+img.dataset.i+1;if(i<LOGO_EXT.length){img.dataset.i=i;img.src='Logos/'+img.dataset.a+'.'+LOGO_EXT[i];return}
  const d=document.createElement('div');d.innerHTML=crest(img.dataset.c,img.dataset.a,+img.dataset.s);img.replaceWith(d.firstChild)}
 function retStat(id){const R=(window.IPL2025_RETENTIONS||[]).filter(r=>r.team===id);if(!R.length)return null;
  const adj=(window.IPL2025_RETENTION_ADJUSTMENTS||{})[id]||0,spent=R.reduce((a,r)=>a+r.price,0)+adj;
@@ -407,7 +407,7 @@ function ftile(t){const a=paddleCode(t),i=TEAM_INFO[a]||[t.name,'',''],r=retStat
  return `<button class="ftile ${on?'on':''}" style="--team:${t.color}" onclick="pf='${t.id}';render(true)">${on?'<span class="ftile-ck">✓ SELECTED</span>':''}<div class="ftile-logo">${teamLogo(t,92)}</div><div class="ftile-code">${esc(a)}</div><div class="ftile-name">${esc(i[0])}</div><div class="ftile-meta">${esc(i[1])}${i[2]?' · '+esc(i[2]):''}</div>${r?`<div class="ftile-chips"><span class="tag">${r.n} retained</span><span class="tag">₹${r.purse} Cr purse</span></div><div class="ftile-top">${esc(r.top.join(' · '))}</div>`:''}</button>`}
 function landing(v){
  let b='';
- if(lt==='create')b=`<div class="mut"><b>FRANCHISE</b> · choose the team you’ll manage</div><div class="fgrid">${SAMPLE.teams.map(ftile).join('')}</div><div class="mut" style="font-size:11px;margin:-6px 0 14px">Tip: put team logos in a <b>logos/</b> folder named like CSK.png, MI.png, RCB.png … Teams without a file show a crest.</div><div class="mut"><b>MODE</b></div><div class="grid" style="margin:8px 0 14px">${Object.entries(MODES).map(([k,m])=>`<button class="${pm===k?'on':''}" style="text-align:left" onclick="pm='${k}';render(true)"><b>${m[0]}</b><br><small>${Math.max(m[1],7)} squad slots · ₹120 Cr budget</small></button>`).join('')}</div><button class="pri" onclick="create()">Create room</button>`;
+ if(lt==='create')b=`<div class="mut"><b>FRANCHISE</b> · choose the team you’ll manage</div><div class="fgrid">${SAMPLE.teams.map(ftile).join('')}</div><div class="mut" style="font-size:11px;margin:-6px 0 14px">Team logos are loaded from the <b>Logos/</b> folder named like CSK.png, MI.png, RCB.png … Teams without a file show a crest.</div><div class="mut"><b>MODE</b></div><div class="grid" style="margin:8px 0 14px">${Object.entries(MODES).map(([k,m])=>`<button class="${pm===k?'on':''}" style="text-align:left" onclick="pm='${k}';render(true)"><b>${m[0]}</b><br><small>${Math.max(m[1],7)} squad slots · ₹120 Cr budget</small></button>`).join('')}</div><button class="pri" onclick="create()">Create room</button>`;
  else if(lt==='join')b=`<div class="row"><input id="rc" placeholder="6-digit room code" maxlength="6" inputmode="numeric"><button class="pri" onclick="join()">Join room</button></div><p class="mut">Get the code from the host, then pick a free franchise inside.</p>`;
  else b=HIST().map(h=>`<div class="row sp" style="margin-bottom:8px"><span>Room <b>${h.code}</b> <span class="mut">${new Date(h.ts).toLocaleDateString()}</span></span><button onclick="location.hash='${h.code}';enter('${h.code}')">Open</button></div>`).join('')||'<span class="mut">No rooms played on this device yet.</span>';
  v.innerHTML=`<div style="text-align:center;padding:18px 0"><h1 style="font-size:clamp(34px,9vw,64px)">AUCTION ROOM</h1><p class="mut">Create room → invite friends with the code → start bidding</p></div><div class="card"><div class="row" style="margin-bottom:14px">${[['create','Create'],['join','Join'],['history','History']].map(t=>`<button class="${lt===t[0]?'on':''}" onclick="lt='${t[0]}';render(true)">${t[1]}</button>`).join('')}</div>${b}</div>`}
@@ -531,7 +531,7 @@ function rAuction(v){
  const leftTeams=cfg?cfg.teams.map(t=>{
   const picks=teamPicks(t.id),o=owners[t.id],isMine=me&&me.id===t.id,isLead=lot&&lot.team===t.id;
   return `<div class="team-mini ${isMine?'mine-team':''} ${isLead?'leading-team':''}" style="--team:${t.color}">
-   <div class="team-mini-head"><span class="team-mini-name"><span class="dot" style="background:${t.color}"></span>${esc(t.name)} ${isMine?'<span class="tag">YOU</span>':''}${isLead?'<span class="tag">BID</span>':''}</span><span class="team-mini-purse">${fmt(left(t.id))}</span></div>
+   <div class="team-mini-head"><span class="team-mini-name">${teamLogo(t,28)}${esc(t.name)} ${isMine?'<span class="tag">YOU</span>':''}${isLead?'<span class="tag">BID</span>':''}</span><span class="team-mini-purse">${fmt(left(t.id))}</span></div>
    <div class="team-mini-meta"><span class="tag">${picks.length}/${S().maxSquad} players</span><span class="tag">✈ ${overseasCount(t.id)} overseas</span></div>
   </div>`}).join(''):'';
  const myPicks=me?teamPicks(me.id).map(x=>x.p):[];
@@ -666,7 +666,7 @@ function rTeams(v){
   const sections=ROLES.map(([k,label,ic])=>sec(k,label,ic,roster.filter(x=>x.p.role===k))).join('')+(others.length?sec('?','Others','👤',others):'');
   const btn=!o&&!me?`<button class="pri" onclick="claim('${t.id}')">Join this team</button>`:o&&o.uid===uid?`<button class="warn" onclick="release('${t.id}')">Leave</button>`:host&&o&&o.uid!==uid?`<button class="warn" onclick="release('${t.id}')">Remove owner</button>`:'';
   return `<div class="tcard ${isMine?'mine':''}" style="--team:${t.color}">
-  <div class="tcard-h"><div><div class="tcard-name"><span class="dot"></span>${esc(t.name)}${isMine?' <span class="tag">YOU</span>':''}</div><div class="mut" style="margin-top:4px">${o?'Managed by <b>'+esc(o.name||'Player')+'</b>':'Unclaimed franchise'}</div></div><div class="tcard-purse"><small>PURSE LEFT</small><b>${fmt(lf)}</b></div></div>
+  <div class="tcard-h"><div><div class="tcard-name">${teamLogo(t,34)}${esc(t.name)}${isMine?' <span class="tag">YOU</span>':''}</div><div class="mut" style="margin-top:4px">${o?'Managed by <b>'+esc(o.name||'Player')+'</b>':'Unclaimed franchise'}</div></div><div class="tcard-purse"><small>PURSE LEFT</small><b>${fmt(lf)}</b></div></div>
   <div class="pbar"><i style="width:${pct}%"></i></div>
   <div class="tstats"><div><small>SQUAD</small><b>${roster.length}/${S().maxSquad}</b></div><div><small>OVERSEAS</small><b>✈ ${overseasCount(t.id)}/${overseasLimit()}</b></div><div><small>SPENT</small><b>${fmt(sp)}</b></div><div><small>RETAINED</small><b>${roster.filter(x=>x.s.retained).length}</b></div></div>
   ${adj?`<div class="mut" style="font-size:11px;margin:-4px 0 10px">Includes official retention-slab adjustment of ${fmt(adj)}</div>`:''}
