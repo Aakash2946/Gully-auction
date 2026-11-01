@@ -43,6 +43,48 @@ textarea{width:100%;min-height:200px;font:12px/1.4 ui-monospace,monospace}
 .sold h2{margin:10px 0 4px;font-size:28px}.sold .av{width:150px;margin:10px auto}
 .stamp{font:900 clamp(44px,12vw,72px) "Courier New",monospace;color:var(--c);letter-spacing:4px;text-shadow:0 0 26px var(--c);transform:rotate(-5deg)}
 @keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+/* Full-screen live auction control room */
+body.auction-mode main{max-width:none;width:100%;padding:12px 18px 22px}
+body.auction-mode #nav{margin-bottom:10px}
+.auction-shell{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(310px,.9fr);gap:14px;align-items:start;min-height:calc(100vh - 112px)}
+.auction-main{min-width:0;display:grid;gap:12px}
+.auction-topline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.auction-status{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.auction-player{display:grid;grid-template-columns:minmax(190px,30%) minmax(0,1fr);gap:22px;align-items:stretch;padding:18px}
+.auction-player .av{height:100%;min-height:300px;aspect-ratio:auto;font-size:58px}
+.auction-player-info{display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.auction-player-info .pn{font-size:clamp(30px,4vw,54px);margin:12px 0}
+.auction-stats{display:grid;grid-template-columns:repeat(4,minmax(55px,1fr));gap:8px;max-width:560px}
+.auction-stats>div{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px}
+.auction-stats small{display:block;color:var(--mut);font-size:10px;letter-spacing:1px}
+.auction-stats b{font-size:clamp(18px,2vw,26px)}
+.auction-bidbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.auction-current-bid{font:900 clamp(34px,5vw,58px)/1 'Courier New',monospace;color:var(--acc2);text-shadow:0 0 16px var(--glow)}
+.auction-timer{font:900 clamp(34px,4vw,48px)/1 'Courier New',monospace;color:var(--acc);text-align:right}
+.auction-actions{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;margin-top:14px}
+button.bid-hero{background:var(--acc);color:var(--onacc);border:0;border-radius:13px;padding:17px 30px;font-size:clamp(18px,2vw,24px);font-weight:900;min-height:66px;flex:1;box-shadow:0 5px 0 color-mix(in srgb,var(--acc) 55%,#000),0 0 24px var(--glow)}
+button.bid-hero:active{transform:translateY(2px);box-shadow:0 2px 0 color-mix(in srgb,var(--acc) 55%,#000)}
+.auction-actions button:not(.bid-hero){min-height:54px;padding:12px 18px}
+.auction-side{display:grid;gap:12px;position:sticky;top:10px;max-height:calc(100vh - 130px);overflow:auto;padding-right:2px}
+.auction-side .card{margin:0}
+.team-board{display:grid;gap:8px}
+.team-mini{border:1px solid var(--line);border-left:4px solid var(--team);border-radius:10px;padding:10px;background:var(--bg)}
+.team-mini.mine-team{box-shadow:inset 0 0 0 1px var(--acc)}
+.team-mini.leading-team{background:color-mix(in srgb,var(--team) 13%,var(--bg))}
+.team-mini-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.team-mini-name{font-weight:850;display:flex;align-items:center;gap:7px}
+.team-mini-purse{font:800 18px 'Courier New',monospace;color:var(--acc2);white-space:nowrap}
+.team-mini-meta{display:flex;gap:6px;flex-wrap:wrap;margin:5px 0}
+.team-mini-picks{font-size:12px;color:var(--mut);line-height:1.5}
+.team-mini-picks b{color:var(--ink)}
+.auction-recent{display:grid;gap:8px}
+.auction-recent-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;border-bottom:1px solid var(--line);padding-bottom:7px}
+.auction-recent-row:last-child{border:0;padding-bottom:0}
+.auction-empty{padding:30px;text-align:center}
+.limit-warning{color:var(--bad);font-size:12px;font-weight:700;margin-top:7px}
+@media(max-width:900px){body.auction-mode main{padding:10px}.auction-shell{grid-template-columns:1fr}.auction-side{position:static;max-height:none;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}}
+@media(max-width:560px){.auction-player{grid-template-columns:105px minmax(0,1fr);gap:12px;padding:12px}.auction-player .av{min-height:170px;font-size:32px}.auction-player-info .pn{font-size:25px}.auction-stats{grid-template-columns:repeat(2,minmax(55px,1fr))}.auction-bidbar{margin-top:10px}.auction-actions{display:grid;grid-template-columns:1fr 1fr}.auction-actions .bid-hero{grid-column:1/-1}.auction-timer{font-size:32px}}
+
 </style></head><body>
 <header><h1>GULLY <span>AUCTION</span></h1>
 <div class="row"><input id="nm" placeholder="Your name" size="12"><select id="th" title="Theme"><option value="">Auto</option><option value="scoreboard">Scoreboard</option><option value="pavilion">Pavilion</option><option value="floodlight">Floodlight</option></select><span id="who" class="tag"></span><button id="gear" title="Host settings" style="display:none" onclick="tab='setup';render(true)">⚙</button></div></header>
@@ -72,6 +114,12 @@ const mine=()=>cfg&&cfg.teams.find(t=>owners[t.id]&&owners[t.id].uid===uid);
 const spent=t=>Object.values(sold).filter(s=>s.team===t).reduce((a,s)=>a+s.price,0);
 const squad=t=>Object.values(sold).filter(s=>s.team===t);
 const left=t=>S().purse-spent(t);
+
+const overseasLimit=()=>Number.isFinite(+S().maxOverseas)?Math.max(0,+S().maxOverseas):8;
+function isOverseas(p){if(!p)return false;if(typeof p.overseas==='boolean')return p.overseas;const c=String(p.country||p.nationality||'').trim().toLowerCase();if(!c)return false;return !['india','indian','ind'].includes(c)}
+function overseasCount(t){return Object.entries(sold).reduce((n,[id,s])=>n+(s.team===t&&isOverseas(ply(id))?1:0),0)}
+function teamPicks(t){return Object.entries(sold).filter(([id,s])=>s.team===t&&ply(id)).map(([id,s])=>({p:ply(id),price:s.price,at:s.at||0})).sort((a,b)=>b.at-a.at)}
+
 const myName=()=>{try{return localStorage.getItem('ga_name')||''}catch(e){return''}};
 function toast(t){$('#msg').innerHTML=t?`<div class="card" style="border-color:var(--bad)">${t}</div>`:''}
 
@@ -110,7 +158,7 @@ async function create(){
  if(!D||!uid)return toast('Still connecting — try again in a moment.');
  const nm=$('#nm').value.trim();if(!nm)return toast('Enter your name (top right) first.');try{localStorage.setItem('ga_name',nm)}catch(e){}
  const code=String(Math.floor(100000+Math.random()*900000));enter(code);
- const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));c.settings.purse=m[2];c.settings.maxSquad=m[1];if(window.PLAYERS)c.players=window.PLAYERS;
+ const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));c.settings.purse=m[2];c.settings.maxSquad=m[1];c.settings.maxOverseas=8;if(window.PLAYERS)c.players=window.PLAYERS;
  await db.doc('meta/room').set({hostUid:uid});await db.doc('cfg/main').set(c);await db.doc('owners/'+pf).set({uid,name:nm});location.hash=code;
 }
 function join(){const c=$('#rc').value.trim();if(!/^\d{6}$/.test(c))return toast('Enter a 6-digit code.');toast('');location.hash=c;enter(c)}
@@ -120,6 +168,7 @@ function nav(){
  $('#nav').onclick=e=>{const t=e.target.dataset.t;if(t){tab=t;render(true)}};
 }
 function render(force){
+ if(tab!=='auction')document.body.classList.remove('auction-mode');
  if(tab==='setup'&&!host)tab='auction';
  nav();const v=$('#view');
  if(!room){$('#nav').innerHTML='';landing(v);return}
@@ -129,19 +178,19 @@ function render(force){
  ({auction:rAuction,teams:rTeams,players:rPlayers,results:rResults,setup:rSetup})[tab](v);
 }
 function rAuction(v){
+ document.body.classList.add('auction-mode');
  const me=mine(),p=lot&&ply(lot.pid),live=lot&&lot.status==='bidding';let h='';
- h+=`<div class="card">${me?`You are <b style="color:${me.color}">${esc(me.name)}</b> \u00b7 purse <b>${fmt(left(me.id))}</b> \u00b7 squad ${squad(me.id).length}/${S().maxSquad}`:'<b>Pick a team</b> in the Teams tab to start bidding.'}<button id="mu" onclick="toggleMute()" style="float:right;padding:2px 10px">${muted?'\ud83d\udd07':'\ud83d\udd0a'}</button></div>`;
- if(p){const bt=team(lot.team),k=p.caps||{};
-  h+=`<div class="card"><div class="pcw">${avatar(p)}<div><div class="row"><span class="tag">${esc(p.role)}</span>${p.country?`<span class="tag">${esc(p.country)}</span>`:''}${p.set?`<span class="tag">Set ${esc(p.set)}</span>`:''}<span class="tag">OVR ${ovr(p)}</span></div>
-  <h2 class="pn">${esc(p.name)}</h2>
-  <div class="st">${[['IPL',k.ipl],['T20I',k.t20],['ODI',k.odi],['TEST',k.test]].map(a=>`<div><small>${a[0]}</small><b>${a[1]||0}</b></div>`).join('')}</div>
-  <div class="row sp"><div><small class="mut">BASE ${fmt(p.base)} \u00b7 CURRENT BID</small><div class="big">${fmt(lot.bid)}</div><div>${bt?`<span class="dot" style="background:${bt.color}"></span> ${esc(bt.name)}`:'<span class="mut">No bids yet</span>'}</div></div><div id="tm" class="timer"></div></div></div></div>
-  <div class="row" style="margin-top:12px">${live?`<button class="pri" onclick="bid()">Bid ${fmt(nextBid())}</button>`:`<b>${lot.status==='done'?(bt?'SOLD to '+esc(bt.name)+' for '+fmt(lot.bid):'UNSOLD'):''}</b>`}
-  ${host&&live?`<button onclick="finish()">Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button>`:''}</div></div>`;
- } else h+=`<div class="card mut">Waiting for the host to start the first player.</div>`;
- if(host&&!live)h+=`<button class="pri" onclick="nextLot()">\u25b6 Start next player (${remaining().length} left)</button>`;
- const rs=Object.keys(sold).map(k=>({k,...sold[k]})).filter(s=>s.team).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,8);
- h+=`<div class="card"><b>Recent signings</b>${rs.map(s=>{const t=team(s.team),p=ply(s.k);return p&&t?`<div class="row sp"><span><span class="dot" style="background:${t.color}"></span> ${esc(t.name)} signed ${esc(p.name)}</span><b>${fmt(s.price)}</b></div>`:''}).join('')||'<div class="mut">Nothing yet</div>'}</div>`;
+ const currentTeam=lot&&lot.team?team(lot.team):null;
+ const overseas=p&&isOverseas(p),myOverseas=me?overseasCount(me.id):0;
+ const blocked=!!(live&&me&&overseas&&myOverseas>=overseasLimit());
+ const canBid=!!(live&&me&&lot.team!==me.id&&!blocked&&nextBid()<=left(me.id)&&squad(me.id).length<S().maxSquad);
+ const recent=Object.entries(sold).map(([id,s])=>({id,...s,p:ply(id),t:team(s.team)})).filter(x=>x.p&&x.t).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,6);
+ const teams=cfg?cfg.teams.map(t=>{const picks=teamPicks(t.id),o=owners[t.id],isMine=me&&me.id===t.id,isLead=lot&&lot.team===t.id;return `<div class="team-mini ${isMine?'mine-team':''} ${isLead?'leading-team':''}" style="--team:${t.color}"><div class="team-mini-head"><span class="team-mini-name"><span class="dot" style="background:${t.color}"></span>${esc(t.name)} ${isMine?'<span class="tag">YOU</span>':''} ${isLead?'<span class="tag">LEADING</span>':''}</span><span class="team-mini-purse">${fmt(left(t.id))}</span></div><div class="team-mini-meta"><span class="tag">${esc(o&&o.name||'Unclaimed')}</span><span class="tag">${picks.length}/${S().maxSquad} players</span><span class="tag">✈ ${overseasCount(t.id)}/${overseasLimit()}</span></div><div class="team-mini-picks">${picks.length?'<b>Latest picks:</b> '+picks.slice(0,3).map(x=>esc(x.p.name)+' ('+fmt(x.price)+')').join(' · '):'No players bought yet'}</div></div>`}).join(''):'';
+ h+=`<div class="auction-shell"><section class="auction-main"><div class="card auction-topline"><div class="auction-status">${me?`<b style="color:${me.color}">${esc(me.name)}</b><span class="mut">· Purse</span><b>${fmt(left(me.id))}</b><span class="tag">Squad ${squad(me.id).length}/${S().maxSquad}</span><span class="tag">✈ Overseas ${myOverseas}/${overseasLimit()}</span>`:'<b>Choose your franchise in the Teams tab to bid.</b>'}</div><button id="mu" onclick="toggleMute()" style="padding:7px 12px">${muted?'🔇':'🔊'} Sound</button></div>`;
+ if(p){const k=p.caps||{};h+=`<div class="card auction-player"><div>${avatar(p)}</div><div class="auction-player-info"><div><div class="row"><span class="tag">${esc(p.role)}</span>${p.country?`<span class="tag">${esc(p.country)}</span>`:''}<span class="tag">${overseas?'✈ OVERSEAS':(p.country?'DOMESTIC':'COUNTRY NOT SET')}</span>${p.set?`<span class="tag">Set ${esc(p.set)}</span>`:''}<span class="tag">OVR ${ovr(p)}</span></div><h2 class="pn">${esc(p.name)}</h2><div class="auction-stats">${[['IPL',k.ipl],['T20I',k.t20],['ODI',k.odi],['TEST',k.test]].map(a=>`<div><small>${a[0]}</small><b>${a[1]||0}</b></div>`).join('')}</div></div><div><div class="auction-bidbar"><div><small class="mut">BASE PRICE · CURRENT BID</small><div class="auction-current-bid">${fmt(lot.bid)}</div><div>${currentTeam?`<span class="dot" style="background:${currentTeam.color}"></span> <b>${esc(currentTeam.name)}</b> is leading`:'<span class="mut">No bids yet</span>'}</div></div><div><small class="mut">TIME LEFT</small><div id="tm" class="auction-timer timer"></div></div></div>${blocked?`<div class="limit-warning">Overseas limit reached. Your team cannot bid on another overseas player.</div>`:''}${me&&nextBid()>left(me.id)?'<div class="limit-warning">Your remaining purse is too low for the next bid.</div>':''}${me&&squad(me.id).length>=S().maxSquad?'<div class="limit-warning">Your squad is full.</div>':''}</div></div></div>
+ <div class="auction-actions">${live?`<button class="bid-hero" onclick="bid()" ${canBid?'':'disabled'}>${me?(lot.team===me.id?'YOU ARE LEADING':`BID ${fmt(nextBid())}`):'JOIN A TEAM TO BID'}</button>`:`<div class="card" style="flex:1;margin:0"><b>${lot.status==='done'?(currentTeam?'SOLD TO '+esc(currentTeam.name)+' FOR '+fmt(lot.bid):'UNSOLD'):'Auction ready'}</b></div>`}${host&&live?`<button onclick="finish()">🔨 Sell now</button><button class="warn" onclick="finish(true)">Mark unsold</button>`:''}${host&&!live?`<button class="pri" onclick="nextLot()">▶ Start next player (${remaining().length} left)</button>`:''}</div>`;
+ }else h+=`<div class="card auction-empty"><div class="big">GULLY AUCTION</div><h2>Ready for the next player?</h2><p class="mut">The host can start the auction when everyone is ready.</p>${host?`<button class="pri" onclick="nextLot()">▶ Start first player (${remaining().length} left)</button>`:''}</div>`;
+ h+=`</section><aside class="auction-side"><div class="card"><div class="row sp" style="margin-bottom:10px"><b>FRANCHISE DASHBOARD</b><span class="tag">${cfg.teams.length} teams</span></div><div class="team-board">${teams}</div></div><div class="card"><div class="row sp" style="margin-bottom:10px"><b>RECENT SIGNINGS</b><span class="tag">LIVE</span></div><div class="auction-recent">${recent.map(x=>`<div class="auction-recent-row"><span><span class="dot" style="background:${x.t.color}"></span> <b>${esc(x.t.name)}</b> · ${esc(x.p.name)}</span><b>${fmt(x.price)}</b></div>`).join('')||'<span class="mut">No players sold yet.</span>'}</div></div></aside></div>`;
  v.innerHTML=h;tick();
 }
 const remaining=()=>cfg?cfg.players.filter(p=>!sold[p.id]):[];
@@ -151,7 +200,7 @@ async function bid(){
  const me=mine();if(!me)return toast('Pick a team in the Teams tab first.');
  if(!lot||lot.status!=='bidding'||Date.now()>lot.endsAt)return;
  if(lot.team===me.id)return;
- const b=nextBid();if(b>left(me.id))return toast('Not enough purse.');
+ const b=nextBid();if(b>left(me.id))return toast('Not enough purse.');if(isOverseas(ply(lot.pid))&&overseasCount(me.id)>=overseasLimit())return toast('Overseas limit reached: maximum '+overseasLimit()+' per team.');
  if(squad(me.id).length>=S().maxSquad)return toast('Your squad is full.');
  toast('');
  try{await db.doc('live/lot').update({bid:b,team:me.id,endsAt:Math.max(lot.endsAt,Date.now()+S().reset*1000)})}catch(e){toast('Bid failed — check your connection.')}
@@ -165,6 +214,7 @@ async function finish(unsold){
  if(!lot||lot.status!=='bidding')return;
  const l=lot,key=l.pid+l.bid+l.endsAt;if(fin===key&&!unsold)return;fin=key;
  const t=unsold?null:l.team;
+ if(t&&isOverseas(ply(l.pid))&&overseasCount(t)>=overseasLimit()){toast('Cannot sell: '+(team(t)?.name||'This team')+' has reached the overseas limit of '+overseasLimit()+'.');return}
  await db.doc('sold/'+l.pid).set({team:t,price:t?l.bid:0,at:Date.now()});
  await db.doc('live/lot').set({...l,team:t,status:'done'});
 }
@@ -226,6 +276,7 @@ function importCsv(rep){
 }
 async function saveCfg(){
  try{const c=JSON.parse($('#js').value);if(!c.settings||!c.teams||!c.players)throw new Error('Needs settings, teams and players');
+ if(c.settings.maxOverseas==null)c.settings.maxOverseas=8;
  await db.doc('cfg/main').set(c);toast('');alert('Saved')}catch(e){toast('Could not save: '+esc(e.message))}
 }
 async function resetAuction(){
