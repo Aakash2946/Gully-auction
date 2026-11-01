@@ -102,6 +102,7 @@ button.bid-hero:disabled{opacity:.55;filter:grayscale(.45);box-shadow:none}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="players.js"></script>
+<script src="retentions.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -153,7 +154,18 @@ function buildAuctionOrder(players){
 const team=id=>cfg&&cfg.teams.find(t=>t.id===id);
 const mine=()=>cfg&&cfg.teams.find(t=>owners[t.id]&&owners[t.id].uid===uid);
 const paddleCode=t=>{if(!t)return'BID';const n=String(t.name||'').trim().toUpperCase();const known={CSK:'CSK',MI:'MI',RCB:'RCB',KKR:'KKR',DC:'DC',RR:'RR',PBKS:'PBKS',SRH:'SRH',LSG:'LSG',GT:'GT'};return known[n]||n.split(/\s+/).map(w=>w[0]).join('').slice(0,4)||'BID'};
-const spent=t=>Object.values(sold).filter(s=>s.team===t).reduce((a,s)=>a+s.price,0);
+const normPlayerName=n=>String(n||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function makeRetainedPlayers(pool){
+ const byName=new Map((pool||[]).map(p=>[normPlayerName(p.name),p]));
+ return window.IPL2025_RETENTIONS.map((r,i)=>{
+  const existing=byName.get(normPlayerName(r.name));
+  const p=existing?{...existing}:{id:'ret25-'+r.team+'-'+i,name:r.name,role:r.role,base:r.price,country:r.country,overseas:r.country!=='India',stats:[],caps:{ipl:0,t20:0,odi:0,test:0}};
+  p.retained=true;p.retainedTeam=r.team;p.retentionPrice=r.price;p.country=p.country||r.country;p.overseas=r.country!=='India';
+  return p;
+ });
+}
+
+const spent=t=>Object.values(sold).filter(s=>s.team===t).reduce((a,s)=>a+s.price,0)+(cfg&&cfg.retentionAdjustments?Number(cfg.retentionAdjustments[t]||0):0);
 const squad=t=>Object.values(sold).filter(s=>s.team===t);
 const left=t=>S().purse-spent(t);
 
@@ -187,11 +199,11 @@ function enter(code){
 }
 let lastS=-1,seen=false,AC=null,muted=false,autoNextKey='';try{muted=localStorage.getItem('ga_mute')==='1'}catch(e){}
 let lt='create',pf='t1',pm='mega';
-const MODES={mega:['Mega',25,120],classic:['Classic',11,90],sprint:['Sprint',5,60]};
+const MODES={mega:['Mega',25,120],classic:['Classic',11,120],sprint:['Sprint',7,120]};
 const HIST=()=>{try{return JSON.parse(localStorage.getItem('ga_hist')||'[]').filter(h=>/^\d{6}$/.test(h.code))}catch(e){return[]}};
 function landing(v){
  let b='';
- if(lt==='create')b=`<div class="mut"><b>FRANCHISE</b> · choose the team you’ll manage</div><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(88px,1fr));margin:8px 0 14px">${SAMPLE.teams.map(t=>`<button class="${pf===t.id?'on':''}" style="border-color:${t.color}" onclick="pf='${t.id}';render(true)"><span class="dot" style="background:${t.color}"></span><br>${t.name}</button>`).join('')}</div><div class="mut"><b>MODE</b></div><div class="grid" style="margin:8px 0 14px">${Object.entries(MODES).map(([k,m])=>`<button class="${pm===k?'on':''}" style="text-align:left" onclick="pm='${k}';render(true)"><b>${m[0]}</b><br><small>${m[1]} players · ₹${m[2]} Cr budget</small></button>`).join('')}</div><button class="pri" onclick="create()">Create room</button>`;
+ if(lt==='create')b=`<div class="mut"><b>FRANCHISE</b> · choose the team you’ll manage</div><div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(88px,1fr));margin:8px 0 14px">${SAMPLE.teams.map(t=>`<button class="${pf===t.id?'on':''}" style="border-color:${t.color}" onclick="pf='${t.id}';render(true)"><span class="dot" style="background:${t.color}"></span><br>${t.name}</button>`).join('')}</div><div class="mut"><b>MODE</b></div><div class="grid" style="margin:8px 0 14px">${Object.entries(MODES).map(([k,m])=>`<button class="${pm===k?'on':''}" style="text-align:left" onclick="pm='${k}';render(true)"><b>${m[0]}</b><br><small>${Math.max(m[1],7)} squad slots · ₹120 Cr budget</small></button>`).join('')}</div><button class="pri" onclick="create()">Create room</button>`;
  else if(lt==='join')b=`<div class="row"><input id="rc" placeholder="6-digit room code" maxlength="6" inputmode="numeric"><button class="pri" onclick="join()">Join room</button></div><p class="mut">Get the code from the host, then pick a free franchise inside.</p>`;
  else b=HIST().map(h=>`<div class="row sp" style="margin-bottom:8px"><span>Room <b>${h.code}</b> <span class="mut">${new Date(h.ts).toLocaleDateString()}</span></span><button onclick="location.hash='${h.code}';enter('${h.code}')">Open</button></div>`).join('')||'<span class="mut">No rooms played on this device yet.</span>';
  v.innerHTML=`<div style="text-align:center;padding:18px 0"><h1 style="font-size:clamp(34px,9vw,64px)">AUCTION ROOM</h1><p class="mut">Create room → invite friends with the code → start bidding</p></div><div class="card"><div class="row" style="margin-bottom:14px">${[['create','Create'],['join','Join'],['history','History']].map(t=>`<button class="${lt===t[0]?'on':''}" onclick="lt='${t[0]}';render(true)">${t[1]}</button>`).join('')}</div>${b}</div>`}
@@ -200,8 +212,21 @@ async function create(){
  if(!D||!uid)return toast('Still connecting — try again in a moment.');
  const nm=$('#nm').value.trim();if(!nm)return toast('Enter your name (top right) first.');try{localStorage.setItem('ga_name',nm)}catch(e){}
  const code=String(Math.floor(100000+Math.random()*900000));enter(code);
- const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));c.settings.purse=m[2];c.settings.maxSquad=m[1];c.settings.maxOverseas=8;if(window.PLAYERS)c.players=window.PLAYERS;const auctionPlan=buildAuctionOrder(c.players);c.auctionOrder=auctionPlan.order;c.auctionSets=auctionPlan.sets;
- await db.doc('meta/room').set({hostUid:uid});await db.doc('cfg/main').set(c);await db.doc('owners/'+pf).set({uid,name:nm});location.hash=code;
+ const m=MODES[pm],c=JSON.parse(JSON.stringify(SAMPLE));
+ c.settings.purse=120;c.settings.maxSquad=Math.max(m[1],7);c.settings.maxOverseas=8;
+ const pool=Array.isArray(window.PLAYERS)?window.PLAYERS:c.players;
+ const retained=makeRetainedPlayers(pool);
+ const retainedNames=new Set(retained.map(p=>normPlayerName(p.name)));
+ const auctionPlayers=pool.filter(p=>!retainedNames.has(normPlayerName(p.name))).map(p=>({...p,retained:false}));
+ c.players=[...auctionPlayers,...retained];
+ c.retentionAdjustments={...window.IPL2025_RETENTION_ADJUSTMENTS};
+ const auctionPlan=buildAuctionOrder(auctionPlayers);c.auctionOrder=auctionPlan.order;c.auctionSets=auctionPlan.sets;
+ await db.doc('meta/room').set({hostUid:uid});
+ await db.doc('cfg/main').set(c);
+ const batch=D.batch();
+ retained.forEach(p=>batch.set(db.collection('sold').doc(p.id),{team:p.retainedTeam,price:p.retentionPrice,at:0,retained:true,season:2025}));
+ await batch.commit();
+ await db.doc('owners/'+pf).set({uid,name:nm});location.hash=code;
 }
 function join(){const c=$('#rc').value.trim();if(!/^\d{6}$/.test(c))return toast('Enter a 6-digit code.');toast('');location.hash=c;enter(c)}
 function nav(){
@@ -305,7 +330,8 @@ function rTeams(v){
  v.innerHTML='<div class="grid">'+cfg.teams.map(t=>{const o=owners[t.id],sq=squad(t.id);
   return `<div class="card" style="border-top:4px solid ${t.color}"><div class="row sp"><b>${esc(t.name)}</b>${o?`<span class="tag">${esc(o.name||'Player')}</span>`:''}</div>
   <div class="mut">Purse ${fmt(left(t.id))} · ${sq.length}/${S().maxSquad}</div>
-  <div style="margin:8px 0">${sq.map(s=>{const p=ply(Object.keys(sold).find(k=>sold[k]===s));return p?`<div class="row sp pl" onclick="stats('${p.id}')"><span>${esc(p.name)} <span class="tag">${esc(p.role)}</span></span><span>${fmt(s.price)}</span></div>`:''}).join('')||'<span class="mut">No players yet</span>'}</div>
+  ${(cfg.retentionAdjustments&&cfg.retentionAdjustments[t.id])?`<div class="mut" style="font-size:11px">Official retention-slab adjustment: ${fmt(cfg.retentionAdjustments[t.id])}</div>`:''}
+  <div style="margin:8px 0">${sq.map(s=>{const p=ply(Object.keys(sold).find(k=>sold[k]===s));return p?`<div class="row sp pl" onclick="stats('${p.id}')"><span>${esc(p.name)} <span class="tag">${esc(p.role)}</span>${s.retained?'<span class="tag">RETAINED 2025</span>':''}</span><span>${fmt(s.price)}</span></div>`:''}).join('')||'<span class="mut">No players yet</span>'}</div>
   ${!o&&!me?`<button class="pri" onclick="claim('${t.id}')">Join this team</button>`:''}
   ${o&&o.uid===uid?`<button class="warn" onclick="release('${t.id}')">Leave</button>`:''}
   ${host&&o&&o.uid!==uid?`<button class="warn" onclick="release('${t.id}')">Remove owner</button>`:''}</div>`}).join('')+'</div>';
@@ -352,12 +378,12 @@ function importCsv(rep){
 async function saveCfg(){
  try{const c=JSON.parse($('#js').value);if(!c.settings||!c.teams||!c.players)throw new Error('Needs settings, teams and players');
  if(c.settings.maxOverseas==null)c.settings.maxOverseas=8;
- const auctionPlan=buildAuctionOrder(c.players);c.auctionOrder=auctionPlan.order;c.auctionSets=auctionPlan.sets;
+ const auctionPlan=buildAuctionOrder(c.players.filter(p=>!p.retained));c.auctionOrder=auctionPlan.order;c.auctionSets=auctionPlan.sets;
  await db.doc('cfg/main').set(c);toast('');alert('Saved')}catch(e){toast('Could not save: '+esc(e.message))}
 }
 async function resetAuction(){
  if(!confirm('Clear all sold players and the current lot?'))return;
- for(const k of Object.keys(sold))await db.doc('sold/'+k).delete();
+ for(const k of Object.keys(sold))if(!sold[k].retained)await db.doc('sold/'+k).delete();
  await db.doc('live/lot').delete();
 }
 function ovr(p){if(p.caps){const k=p.caps,w=(k.ipl||0)+.7*(k.t20||0)+.3*(k.odi||0)+.3*(k.test||0);return Math.max(50,Math.min(95,Math.round(56+13*Math.log10(1+w)+(p.base||0)*2)))}const st=p.stats||[],n=st.length||1,c=career(p),m=c.m||1,sr=st.reduce((a,s)=>a+(+s.sr||0),0)/n,e=st.reduce((a,s)=>a+(+s.e||0),0)/n;
