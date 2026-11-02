@@ -808,7 +808,32 @@ function rResults(v){
  v.innerHTML='<div class="card mut">Each team’s best Playing XI (with a keeper and bowling cover) ranked by total OVR. Highest total wins.</div>'+rows.map((r,i)=>`<div class="card" style="border-left:5px solid ${r.t.color}"><div class="row sp"><b>${i===0&&r.x.length?'🏆 ':''}${i+1}. ${esc(r.t.name)}${owners[r.t.id]?' · '+esc(owners[r.t.id].name||''):''}</b><b>${r.tot} pts${r.x.length<Math.min(11,S().maxSquad)?' <span class="tag">XI incomplete</span>':''}</b></div><div class="mut">${r.x.map(p=>esc(p.name)+' '+ovr(p)).join(' · ')||'No players yet'}</div></div>`).join('')}
 const RC={BAT:'#2563eb',BOWL:'#dc2626',AR:'#7c3aed',WK:'#059669'};
 const ini=n=>n.split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
-function avatar(p){return `<div class="av" style="--c:${RC[p.role]||'#555'}"><span>${esc(ini(p.name))}</span><img src="${esc(p.photo||'photos/'+p.id+'.jpg')}" alt="" onerror="if(!this.dataset.t){this.dataset.t=1;this.src=this.src.replace('.jpg','.png')}else this.remove()"></div>`}
+// Player portraits uploaded to the repository's Players/ folder.
+// Names are normalized so minor punctuation/capitalization differences still match.
+const PLAYER_PHOTOS={
+ 'arshdeep singh':'Players/Arshdeep_Singh.png',
+ 'david miller':'Players/David_Miller.png',
+ 'jos buttler':'Players/Jos_Buttler.png',
+ 'kagiso rabada':'Players/Kagiso_Rabada.png',
+ 'kl rahul':'Players/KL_Rahul.png',
+ 'liam livingstone':'Players/Liam_Livingstone.png',
+ 'mitchell starc':'Players/Mitchell_Starc.png',
+ 'mohammad shami':'Players/Mohammad_Shami.png',
+ 'mohammed shami':'Players/Mohammad_Shami.png',
+ 'mohammad siraj':'Players/Mohammad_Siraj.png',
+ 'mohammed siraj':'Players/Mohammad_Siraj.png',
+ 'rishabh pant':'Players/Rishabh_Pant.png',
+ 'shreyas iyer':'Players/Shreyas_Iyer.png',
+ 'yuzvendra chahal':'Players/Yuzvendra_Chahal.png'
+};
+function playerPhoto(p){
+ const key=String(p.name||'').trim().toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\\s+/g,' ');
+ return p.photo||PLAYER_PHOTOS[key]||'photos/'+p.id+'.jpg';
+}
+function avatar(p){
+ const src=playerPhoto(p);
+ return `<div class="av" style="--c:${RC[p.role]||'#555'}"><span>${esc(ini(p.name))}</span><img src="${esc(src)}" alt="" onerror="if(!this.dataset.fallback&&this.src.toLowerCase().endsWith('.jpg')){this.dataset.fallback='1';this.src=this.src.replace(/\\.jpg$/i,'.png')}else this.remove()"></div>`;
+}
 function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
 function tone(f,t0,d,type,v){if(muted)return;const a=ac();if(!a)return;const o=a.createOscillator(),g=a.createGain(),t=a.currentTime+t0;o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v||.2,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.05)}
 const sfx={start:()=>{tone(440,0,.1,'square',.1);tone(660,.12,.2,'square',.1)},bid:()=>{tone(660,0,.12,'triangle',.2);tone(880,.08,.16,'triangle',.2)},tick:()=>tone(520,0,.08,'square',.08),
