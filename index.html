@@ -749,7 +749,7 @@ async function releaseRetention(playerId){
    if(!os.exists||os.data().uid!==uid)throw new Error('You no longer manage this franchise.');
    if(ls.exists)throw new Error('The auction has already started. Retentions are locked.');
    if(!ss.exists||ss.data().retained!==true||ss.data().team!==me.id)throw new Error('This retained player is no longer assigned to your team.');
-   const latest=cs.data(),players=(latest.players||[]).map(x=>x.id===playerId?{...x,retained:false,releasedRetention:true,auctionSet:'Released Retentions'}:x);
+   const latest=cs.data(),players=(latest.players||[]).map(x=>x.id===playerId?{...x,retained:false,releasedRetention:true,base:3,auctionSet:'Released Retentions'}:x);
    const released=[...new Set([...(latest.releasedRetentions||[]),playerId])];
    const pool=players.filter(x=>!x.retained);
    const existing=Array.isArray(latest.auctionOrder)?latest.auctionOrder.filter(id=>pool.some(x=>x.id===id)&&id!==playerId):[];
