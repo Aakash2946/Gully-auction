@@ -22,6 +22,20 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #homeBtn{border-color:var(--acc);color:var(--acc);font-weight:700}#homeBtn:hover{background:var(--acc);color:var(--onacc)}
 input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%}
 .card{background:var(--card);box-shadow:inset 0 0 0 1px var(--line),0 6px 18px #0004;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.join-team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:16px}
+.join-team-card{border:1px solid var(--line);border-left:4px solid var(--team);border-radius:12px;padding:12px;background:var(--bg);display:grid;gap:12px}
+.join-team-card.taken{opacity:.48;filter:grayscale(1)}
+.join-team-head{display:flex;align-items:center;gap:10px;min-width:0}
+.join-team-head>div{display:grid;gap:3px;min-width:0}
+.join-team-head small,.join-retention-row small{display:block;color:var(--mut);font-size:11px}
+.join-team-card button{width:100%}
+.join-retention-list{display:grid;gap:8px;margin-top:14px}
+.join-retention-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--bg);padding:10px;border-radius:10px;cursor:pointer}
+.join-retention-row input{width:18px;height:18px;accent-color:var(--acc)}
+.join-retention-row span{flex:1;min-width:0}
+.join-retention-row strong{font-size:12px;color:var(--acc2);white-space:nowrap}
+@media(max-width:560px){.join-team-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.join-team-card{padding:9px}.join-team-head{gap:6px}.join-team-head img{width:34px!important;height:34px!important}.join-team-head b{font-size:12px}.join-team-head small{font-size:10px}.join-team-card button{font-size:11px;padding:7px 5px}.join-retention-row{flex-wrap:wrap}.join-retention-row strong{margin-left:28px}}
+
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
 .mut{color:var(--mut)}.big{font:800 40px/1 "Courier New",ui-monospace,monospace;color:var(--acc2);text-shadow:0 0 14px var(--glow)}
 .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
@@ -321,7 +335,7 @@ const FN=['Arjun','Kabir','Dev','Rohan','Sameer','Vikram','Aditya','Nikhil','Tar
 SAMPLE.settings={purse:100,timer:20,reset:8,inc:0.25,maxSquad:15};
 SAMPLE.teams=[['CSK','#f5b800'],['MI','#1d4ed8'],['RCB','#dc2626'],['KKR','#6d28d9'],['DC','#2563eb'],['RR','#ec4899'],['PBKS','#e11d48'],['SRH','#f97316'],['LSG','#0ea5e9'],['GT','#1e3a8a']].map((t,i)=>({id:'t'+i,name:t[0],color:t[1]}));
 SAMPLE.players=Array.from({length:200},(_,i)=>{const r=RL[i%10],b=r==='BOWL',w=r==='BAT'||r==='WK';return{id:'p'+i,name:FN[i%10]+' '+LN[(i*7)%12]+(i>=60?' '+'ABC'[Math.floor(i/60)-1]:''),role:r,base:[2,1.5,1,0.5][i%4],stats:[1,2].map(k=>({y:'Season '+k,m:9+(i+k)%5,r:b?15+(i*3+k*5)%30:w?220+((i*37+k*11)%260):120+((i*29+k*13)%200),sr:b?90:122+(i*5+k)%26,w:w?0:4+(i*3+k)%11,e:b?6.8+((i+k)%9)/5:7.5+((i+k)%7)/6}))}});
-let db,D,room='',meta=null,uid=null,host=false,cfg=null,lot=null,sold={},owners={},tab='auction',fin='',loaded={c:0};
+let db,D,room='',meta=null,uid=null,host=false,cfg=null,lot=null,sold={},owners={},tab='auction',fin='',loaded={c:0},joinFlow=false,joinTeamId='',joinReleaseIds=[];
 const S=()=>cfg&&cfg.settings||SAMPLE.settings;
 const ply=id=>cfg&&cfg.players.find(p=>p.id===id);
 function auctionSetName(p){
@@ -467,6 +481,43 @@ function landing(v){
  else if(lt==='join')b=`<div class="row"><input id="rc" placeholder="6-digit room code" maxlength="6" inputmode="numeric"><button class="pri" onclick="join()">Join room</button></div><p class="mut">Get the code from the host, then pick a free franchise inside.</p>`;
  else b=HIST().map(h=>`<div class="row sp" style="margin-bottom:8px"><span>Room <b>${h.code}</b> <span class="mut">${new Date(h.ts).toLocaleDateString()}</span></span><button onclick="location.hash='${h.code}';enter('${h.code}')">Open</button></div>`).join('')||'<span class="mut">No rooms played on this device yet.</span>';
  v.innerHTML=`<div style="text-align:center;padding:18px 0"><h1 style="font-size:clamp(34px,9vw,64px)">AUCTION ROOM</h1><p class="mut">Create room → invite friends with the code → start bidding</p></div><div class="card"><div class="row" style="margin-bottom:14px">${[['create','Create'],['join','Join'],['history','History']].map(t=>`<button class="${lt===t[0]?'on':''}" onclick="lt='${t[0]}';render(true)">${t[1]}</button>`).join('')}</div>${b}</div>`}
+function renderJoinFlow(v){
+ if(!cfg){v.innerHTML='<div class="card"><b>Loading room '+esc(room)+'…</b><p class="mut">Fetching franchises and current team owners.</p></div>';return}
+ const current=mine();
+ if(current&&!joinTeamId)joinTeamId=current.id;
+ const chosen=joinTeamId&&team(joinTeamId);
+ if(!chosen){
+  v.innerHTML=`<div class="card"><div class="row sp"><div><h2 style="margin:0">Choose your franchise</h2><div class="mut">Room ${esc(room)} · Select one available team</div></div><button onclick="cancelJoinFlow()">Back</button></div><div class="join-team-grid">${cfg.teams.map(t=>{
+   const o=owners[t.id],taken=!!o,disabled=taken;
+   return `<div class="join-team-card ${taken?'taken':''}" style="--team:${t.color}"><div class="join-team-head">${teamLogo(t,46)}<div><b>${esc(t.name)}</b><small>${taken?'Managed by '+esc(o.name||'another player'):'Available franchise'}</small></div></div><button class="${taken?'':'pri'}" ${disabled?'disabled':''} onclick="claim('${t.id}')">${taken?'Already selected':'Join this team'}</button></div>`;
+  }).join('')}</div></div>`;
+  return;
+ }
+ const roster=cfg.players.filter(p=>p.retained&&p.retainedTeam===chosen.id&&sold[p.id]?.retained);
+ const releaseable=!lot;
+ v.innerHTML=`<div class="card"><div class="row sp"><div><h2 style="margin:0">Your franchise</h2><div class="mut">${teamLogo(chosen,32)} <b>${esc(chosen.name)}</b> · Room ${esc(room)}</div></div><button onclick="cancelJoinFlow()">Back</button></div>
+ <p class="mut">Your team is reserved. Before entering the auction, choose whether to release any retained players. This step is optional.</p>
+ <div class="join-retention-list">${roster.length?roster.map(p=>`<label class="join-retention-row"><input type="checkbox" ${joinReleaseIds.includes(p.id)?'checked':''} ${releaseable?'':'disabled'} onchange="toggleJoinRelease('${p.id}',this.checked)"><span><b>${esc(p.name)}</b><small>Retained for ${fmt(p.retentionPrice||p.base)} · ${esc(p.role||'Player')}</small></span><strong>Refund ${fmt(p.retentionPrice||p.base)}</strong></label>`).join(''):'<div class="mut">No retained players belong to this franchise.</div>'}</div>
+ ${!releaseable?'<p class="mut">The auction has already started, so retained players can no longer be released.</p>':''}
+ <div class="row sp" style="margin-top:14px"><span class="mut">${joinReleaseIds.length} retained player(s) selected for release</span><button class="pri" onclick="finishJoinFlow()">Enter auction room</button></div></div>`;
+}
+function toggleJoinRelease(id,on){
+ joinReleaseIds=on?[...new Set([...joinReleaseIds,id])]:joinReleaseIds.filter(x=>x!==id);
+ render(true);
+}
+function cancelJoinFlow(){
+ joinFlow=false;joinTeamId='';joinReleaseIds=[];room='';cfg=null;owners={};sold={};lot=null;location.hash='';tab='auction';render(true);
+}
+async function finishJoinFlow(){
+ if(!joinTeamId||!mine()||mine().id!==joinTeamId)return toast('Choose an available franchise first.');
+ if(lot&&joinReleaseIds.length)return toast('The auction has already started. Remove the release selections to continue.');
+ for(const id of [...joinReleaseIds]){
+  const p=ply(id);
+  if(!p||!p.retained||p.retainedTeam!==joinTeamId)continue;
+  await releaseRetention(id,true);
+ }
+ joinFlow=false;joinTeamId='';joinReleaseIds=[];tab='auction';render(true);
+}
 function landingOld(v){v.innerHTML=`<div class="card"><h2 style="margin-top:0">Run your own auction</h2><p class="mut">Create a room, then use Share → Copy link and send it. Everyone who opens that link joins your party. Anyone with a 6-digit code can also join below.</p><button class="pri" onclick="create()">Create room</button></div><div class="card"><b>Join a room</b><div class="row" style="margin-top:8px"><input id="rc" placeholder="6-digit code" maxlength="6" inputmode="numeric"><button onclick="join()">Join</button></div></div>`}
 async function create(){
  if(!D||!uid)return toast('Still connecting — try again in a moment.');
@@ -488,7 +539,7 @@ async function create(){
  await batch.commit();
  await db.doc('owners/'+pf).set({uid,name:nm});location.hash=code;
 }
-function join(){const c=$('#rc').value.trim();if(!/^\d{6}$/.test(c))return toast('Enter a 6-digit code.');toast('');location.hash=c;enter(c)}
+function join(){const c=$('#rc').value.trim();if(!/^\d{6}$/.test(c))return toast('Enter a 6-digit code.');toast('');joinFlow=true;joinTeamId='';joinReleaseIds=[];location.hash=c;enter(c)}
 function nav(){
  const tabs=[['auction','Auction'],['teams','Teams'],['players','Players'],['results','Results']];$('#gear').style.display=host?'':'none';
  $('#nav').innerHTML=tabs.map(t=>`<button class="${tab===t[0]?'on':''}" data-t="${t[0]}">${t[1]}</button>`).join('');
@@ -502,6 +553,7 @@ function render(force){
  if(tab!=='auction'||!room||!cfg)paddleSync(null);
  if(tab==='setup'&&!host)tab='auction';
  nav();const v=$('#view');
+ if(joinFlow){$('#nav').innerHTML='';document.body.classList.remove('auction-mode','teams-mode');renderJoinFlow(v);return}
  if(!room){$('#nav').innerHTML='';landing(v);return}
  if(tab==='setup'&&!force&&v.dataset.t==='setup')return;
  v.dataset.t=tab;
@@ -730,14 +782,14 @@ function rTeams(v){
   <div class="rgrid">${sections}</div>
   ${btn?`<div class="row tcard-a">${btn}</div>`:''}</div>`}).join('')+'</div>';
 }
-async function releaseRetention(playerId){
+async function releaseRetention(playerId,silent=false){
  if(!uid||!room)return toast('Join a room first.');
  if(lot)return toast('Retentions can only be released before the first auction lot starts.');
  const me=mine();if(!me)return toast('Choose your franchise first.');
  const p=ply(playerId);
  if(!p||!p.retained||p.retainedTeam!==me.id)return toast('You can only release a retained player from your own franchise.');
  const price=Number(p.retentionPrice||0);
- if(!confirm('Release '+p.name+' from '+me.name+'?\\n\\n₹'+price.toFixed(2)+' Cr will be returned to your purse. The player will enter the auction before the first regular set.'))return;
+ if(!silent&&!confirm('Release '+p.name+' from '+me.name+'?\\n\\n₹'+price.toFixed(2)+' Cr will be returned to your purse. The player will enter the auction before the first regular set.'))return;
  try{
   await D.runTransaction(async tx=>{
    const cfgRef=D.doc('rooms/'+room+'/cfg/main');
@@ -761,14 +813,16 @@ async function releaseRetention(playerId){
    tx.update(cfgRef,{players,releasedRetentions:released,auctionOrder:order,auctionSets});
    tx.delete(soldRef);
   });
-  toast('Player released. ₹'+price.toFixed(2)+' Cr returned to '+esc(me.name)+'.');
- }catch(e){toast('Could not release player: '+esc(e.message||e))}
+  if(!silent)toast('Player released. ₹'+price.toFixed(2)+' Cr returned to '+esc(me.name)+'.');
+ }catch(e){toast('Could not release player: '+esc(e.message||e));throw e}
 }
 async function claim(id){
  if(!uid)return toast('Sign in to join a team.');
  const r=db.doc('owners/'+id),s=await r.get();
  if(s.exists)return toast('Someone just took that team.');
- await r.set({uid,name:myName()||'Player'});
+ const owner={uid,name:myName()||'Player'};
+ await r.set(owner);owners[id]=owner;
+ if(joinFlow){joinTeamId=id;joinReleaseIds=[];render(true)}
 }
 const release=id=>db.doc('owners/'+id).delete();
 const setOpen={};
