@@ -22,6 +22,7 @@ button:disabled{opacity:.45;cursor:not-allowed}
 #homeBtn{border-color:var(--acc);color:var(--acc);font-weight:700}#homeBtn:hover{background:var(--acc);color:var(--onacc)}
 input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 10px;max-width:100%}
 .card{background:var(--card);box-shadow:inset 0 0 0 1px var(--line),0 6px 18px #0004;border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.release-inbox{border-color:var(--acc)}.release-request-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)}.release-request-row .row{gap:6px}.release-request-row button{font-size:12px;padding:6px 10px}@media(max-width:560px){.release-request-row{align-items:flex-start;flex-direction:column}.release-request-row .row{width:100%}.release-request-row button{flex:1}}
 .join-team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:16px}
 .join-team-card{border:1px solid var(--line);border-left:4px solid var(--team);border-radius:12px;padding:12px;background:var(--bg);display:grid;gap:12px}
 .join-team-card.taken{opacity:.48;filter:grayscale(1)}
@@ -335,7 +336,7 @@ const FN=['Arjun','Kabir','Dev','Rohan','Sameer','Vikram','Aditya','Nikhil','Tar
 SAMPLE.settings={purse:100,timer:20,reset:8,inc:0.25,maxSquad:15};
 SAMPLE.teams=[['CSK','#f5b800'],['MI','#1d4ed8'],['RCB','#dc2626'],['KKR','#6d28d9'],['DC','#2563eb'],['RR','#ec4899'],['PBKS','#e11d48'],['SRH','#f97316'],['LSG','#0ea5e9'],['GT','#1e3a8a']].map((t,i)=>({id:'t'+i,name:t[0],color:t[1]}));
 SAMPLE.players=Array.from({length:200},(_,i)=>{const r=RL[i%10],b=r==='BOWL',w=r==='BAT'||r==='WK';return{id:'p'+i,name:FN[i%10]+' '+LN[(i*7)%12]+(i>=60?' '+'ABC'[Math.floor(i/60)-1]:''),role:r,base:[2,1.5,1,0.5][i%4],stats:[1,2].map(k=>({y:'Season '+k,m:9+(i+k)%5,r:b?15+(i*3+k*5)%30:w?220+((i*37+k*11)%260):120+((i*29+k*13)%200),sr:b?90:122+(i*5+k)%26,w:w?0:4+(i*3+k)%11,e:b?6.8+((i+k)%9)/5:7.5+((i+k)%7)/6}))}});
-let db,D,room='',meta=null,uid=null,host=false,cfg=null,lot=null,sold={},owners={},tab='auction',fin='',loaded={c:0},joinFlow=false,joinTeamId='',joinReleaseIds=[];
+let db,D,room='',meta=null,uid=null,host=false,cfg=null,lot=null,sold={},owners={},releaseRequests=[],tab='auction',fin='',loaded={c:0},joinFlow=false,joinTeamId='',joinReleaseIds=[];
 const S=()=>cfg&&cfg.settings||SAMPLE.settings;
 const ply=id=>cfg&&cfg.players.find(p=>p.id===id);
 function auctionSetName(p){
@@ -454,6 +455,7 @@ function enter(code){
  db.doc('live/lot').onSnapshot(s=>{const o=lot;lot=s.exists?s.data():null;react(o,lot);render()});
  db.collection('sold').onSnapshot(q=>{sold={};q.forEach(d=>sold[d.id]=d.data());render()});
  db.collection('owners').onSnapshot(q=>{owners={};q.forEach(d=>owners[d.id]=d.data());render()});
+ db.collection('releaseRequests').onSnapshot(q=>{releaseRequests=q.docs.map(d=>({id:d.id,...d.data()}));render()});
  if(roomChatUnsub)roomChatUnsub();
  roomChatMessages=[];renderRoomChat();
  roomChatUnsub=db.collection('chat').orderBy('at','desc').limit(80).onSnapshot(q=>{roomChatMessages=q.docs.map(d=>({id:d.id,...d.data()})).reverse();renderRoomChat()},e=>{$('#roomChatStatus').textContent=e.code==='permission-denied'?'Chat read permission denied. Firestore rules need to allow room members to read chat.':'Chat is temporarily unavailable.'});
@@ -496,10 +498,10 @@ function renderJoinFlow(v){
  const roster=cfg.players.filter(p=>p.retained&&p.retainedTeam===chosen.id&&sold[p.id]?.retained);
  const releaseable=!lot;
  v.innerHTML=`<div class="card"><div class="row sp"><div><h2 style="margin:0">Your franchise</h2><div class="mut">${teamLogo(chosen,32)} <b>${esc(chosen.name)}</b> · Room ${esc(room)}</div></div><button onclick="cancelJoinFlow()">Back</button></div>
- <p class="mut">Your team is reserved. Before entering the auction, choose whether to release any retained players. This step is optional.</p>
- <div class="join-retention-list">${roster.length?roster.map(p=>`<label class="join-retention-row"><input type="checkbox" ${joinReleaseIds.includes(p.id)?'checked':''} ${releaseable?'':'disabled'} onchange="toggleJoinRelease('${p.id}',this.checked)"><span><b>${esc(p.name)}</b><small>Retained for ${fmt(p.retentionPrice||p.base)} · ${esc(p.role||'Player')}</small></span><strong>Refund ${fmt(p.retentionPrice||p.base)}</strong></label>`).join(''):'<div class="mut">No retained players belong to this franchise.</div>'}</div>
+ <p class="mut">Your team is reserved. Before entering the auction, you can ask the host to release any retained players. This step is optional.</p>
+ <div class="join-retention-list">${roster.length?roster.map(p=>`<label class="join-retention-row"><input type="checkbox" ${joinReleaseIds.includes(p.id)?'checked':''} ${releaseable?'':'disabled'} onchange="toggleJoinRelease('${p.id}',this.checked)"><span><b>${esc(p.name)}</b><small>Retained for ${fmt(p.retentionPrice||p.base)} · ${esc(p.role||'Player')}</small></span><strong>Refund ${fmt(p.retentionPrice||p.base)} if approved</strong></label>`).join(''):'<div class="mut">No retained players belong to this franchise.</div>'}</div>
  ${!releaseable?'<p class="mut">The auction has already started, so retained players can no longer be released.</p>':''}
- <div class="row sp" style="margin-top:14px"><span class="mut">${joinReleaseIds.length} retained player(s) selected for release</span><button class="pri" onclick="finishJoinFlow()">Enter auction room</button></div></div>`;
+ <div class="row sp" style="margin-top:14px"><span class="mut">${joinReleaseIds.length} release request(s) to send</span><button class="pri" onclick="finishJoinFlow()">Enter auction room</button></div></div>`;
 }
 function toggleJoinRelease(id,on){
  joinReleaseIds=on?[...new Set([...joinReleaseIds,id])]:joinReleaseIds.filter(x=>x!==id);
@@ -511,12 +513,16 @@ function cancelJoinFlow(){
 async function finishJoinFlow(){
  if(!joinTeamId||!mine()||mine().id!==joinTeamId)return toast('Choose an available franchise first.');
  if(lot&&joinReleaseIds.length)return toast('The auction has already started. Remove the release selections to continue.');
- for(const id of [...joinReleaseIds]){
-  const p=ply(id);
-  if(!p||!p.retained||p.retainedTeam!==joinTeamId)continue;
-  await releaseRetention(id,true);
- }
- joinFlow=false;joinTeamId='';joinReleaseIds=[];tab='auction';render(true);
+ try{
+  for(const id of [...joinReleaseIds]){
+   const p=ply(id);
+   if(!p||!p.retained||p.retainedTeam!==joinTeamId)continue;
+   await requestRetentionRelease(id);
+  }
+  const sent=joinReleaseIds.length;
+  joinFlow=false;joinTeamId='';joinReleaseIds=[];tab='auction';render(true);
+  if(sent)toast('Release request(s) sent to the host. You can enter the auction while they await approval.');
+ }catch(e){toast('Could not send release request: '+esc(e.message||e))}
 }
 function landingOld(v){v.innerHTML=`<div class="card"><h2 style="margin-top:0">Run your own auction</h2><p class="mut">Create a room, then use Share → Copy link and send it. Everyone who opens that link joins your party. Anyone with a 6-digit code can also join below.</p><button class="pri" onclick="create()">Create room</button></div><div class="card"><b>Join a room</b><div class="row" style="margin-top:8px"><input id="rc" placeholder="6-digit code" maxlength="6" inputmode="numeric"><button onclick="join()">Join</button></div></div>`}
 async function create(){
@@ -762,10 +768,13 @@ function tick(){
 const ROLES=[['BAT','Batters','🏏'],['BOWL','Bowlers','🎯'],['AR','All-rounders','⚡'],['WK','Wicketkeepers','🧤']];
 function rTeams(v){
  const me=mine(),total=+S().purse||1;
- const prow=(x,teamId,canRelease)=>{const p=x.p,os=isOverseas(p),releaseBtn=x.s.retained&&canRelease&&!lot?`<button type="button" class="ret-release-btn" onclick="event.stopPropagation();releaseRetention('${p.id}')" title="Release this retained player before the auction">Release</button>`:'';
+ const pendingRequests=releaseRequests.filter(r=>r.status==='pending');
+ const requestPanel=host&&pendingRequests.length?`<div class="card release-inbox"><div class="row sp"><b>RELEASE REQUESTS</b><span class="tag">${pendingRequests.length} pending</span></div>${pendingRequests.map(r=>`<div class="release-request-row"><div><b>${esc(r.playerName)}</b><div class="mut">${esc(r.teamName)} · requested by ${esc(r.requesterName||'Player')} · Refund ${fmt(r.price)}</div></div><div class="row"><button class="pri" onclick="approveReleaseRequest('${r.id}')" ${lot?'disabled':''}>Approve</button><button class="warn" onclick="rejectReleaseRequest('${r.id}')">Reject</button></div></div>`).join('')}</div>`:'';
+
+ const prow=(x,teamId,canRelease)=>{const p=x.p,os=isOverseas(p),releaseBtn=x.s.retained&&canRelease&&!lot?`<button type="button" class="ret-release-btn" onclick="event.stopPropagation();requestRetentionRelease('${p.id}')" title="Ask the host to release this retained player">Request release</button>`:'';
   return `<div class="prow pl" onclick="stats('${p.id}')"><div class="mav">${avatar(p)}</div><div class="prow-i"><b>${esc(p.name)}</b><div class="prow-t">${x.s.retained?'<span class="tag rt">RETAINED</span>':''}${os?'<span class="tag">✈ '+esc(p.country||'Overseas')+'</span>':''}<span class="tag">OVR ${ovr(p)}</span></div></div><div class="prow-p">${fmt(x.s.price)}</div>${releaseBtn}</div>`};
  const sec=(k,label,ic,list,teamId,canRelease)=>`<div class="rsec" style="--rc:${RC[k]||'#888'}"><div class="rsec-h"><span>${ic} ${label}</span><span class="tag">${list.length}</span></div>${list.map(x=>prow(x,teamId,canRelease)).join('')||'<div class="rsec-empty">No '+label.toLowerCase()+' yet</div>'}</div>`;
- v.innerHTML='<div class="tgrid">'+cfg.teams.map(t=>{
+ v.innerHTML=requestPanel+'<div class="tgrid">'+cfg.teams.map(t=>{
   const o=owners[t.id],isMine=me&&me.id===t.id;
   const roster=Object.entries(sold).filter(([id,s])=>s.team===t.id&&ply(id)).map(([id,s])=>({p:ply(id),s})).sort((a,b)=>b.s.price-a.s.price);
   const lf=left(t.id),sp=spent(t.id),pct=Math.max(0,Math.min(100,lf/total*100));
@@ -778,43 +787,77 @@ function rTeams(v){
   <div class="pbar"><i style="width:${pct}%"></i></div>
   <div class="tstats"><div><small>SQUAD</small><b>${roster.length}/${S().maxSquad}</b></div><div><small>OVERSEAS</small><b>✈ ${overseasCount(t.id)}/${overseasLimit()}</b></div><div><small>SPENT</small><b>${fmt(sp)}</b></div><div><small>RETAINED</small><b>${roster.filter(x=>x.s.retained).length}</b></div></div>
   ${adj?`<div class="mut" style="font-size:11px;margin:-4px 0 10px">Includes official retention-slab adjustment of ${fmt(adj)}</div>`:''}
-  ${isMine&&!lot&&roster.some(x=>x.s.retained)?'<div class="mut" style="font-size:11px;margin:0 0 9px">You can release any of your retained players before the first auction lot. Their retention price returns to your purse.</div>':''}
+  ${isMine&&!lot&&roster.some(x=>x.s.retained)?'<div class="mut" style="font-size:11px;margin:0 0 9px">You can request release of your retained players before the first auction lot. The host must approve each request.</div>':''}
   <div class="rgrid">${sections}</div>
   ${btn?`<div class="row tcard-a">${btn}</div>`:''}</div>`}).join('')+'</div>';
 }
-async function releaseRetention(playerId,silent=false){
+async function requestRetentionRelease(playerId){
  if(!uid||!room)return toast('Join a room first.');
- if(lot)return toast('Retentions can only be released before the first auction lot starts.');
+ if(lot)return toast('Release requests are closed after the first auction lot starts.');
  const me=mine();if(!me)return toast('Choose your franchise first.');
  const p=ply(playerId);
- if(!p||!p.retained||p.retainedTeam!==me.id)return toast('You can only release a retained player from your own franchise.');
- const price=Number(p.retentionPrice||0);
- if(!silent&&!confirm('Release '+p.name+' from '+me.name+'?\\n\\n₹'+price.toFixed(2)+' Cr will be returned to your purse. The player will enter the auction before the first regular set.'))return;
+ if(!p||!p.retained||p.retainedTeam!==me.id)return toast('You can only request release of a retained player from your own franchise.');
+ const existing=releaseRequests.find(r=>r.playerId===playerId&&r.teamId===me.id&&r.status==='pending');
+ if(existing)return toast('A release request for this player is already pending.');
+ const ss=sold[playerId];
+ if(!ss||ss.retained!==true||ss.team!==me.id)return toast('This player is no longer retained by your team.');
+ try{
+  await db.collection('releaseRequests').add({
+   playerId,playerName:p.name,teamId:me.id,teamName:me.name,
+   price:Number(p.retentionPrice||ss.price||0),
+   requesterUid:uid,requesterName:myName()||'Player',
+   status:'pending',createdAt:Date.now()
+  });
+  toast('Release request sent to the host.');
+ }catch(e){toast('Could not send release request: '+esc(e.message||e))}
+}
+async function approveReleaseRequest(requestId){
+ if(!host||!uid||!room)return toast('Only the host can approve release requests.');
+ if(lot)return toast('Release requests are locked after the first auction lot starts.');
+ const req=releaseRequests.find(r=>r.id===requestId);
+ if(!req||req.status!=='pending')return toast('This request is no longer pending.');
+ const price=Number(req.price||0);
+ if(!confirm('Approve release of '+req.playerName+' from '+req.teamName+'?\\n\\n₹'+price.toFixed(2)+' Cr will be refunded. Auction base price will be ₹3 Cr.'))return;
  try{
   await D.runTransaction(async tx=>{
    const cfgRef=D.doc('rooms/'+room+'/cfg/main');
-   const ownerRef=D.doc('rooms/'+room+'/owners/'+me.id);
+   const metaRef=D.doc('rooms/'+room+'/meta/room');
    const lotRef=D.doc('rooms/'+room+'/live/lot');
-   const soldRef=D.doc('rooms/'+room+'/sold/'+playerId);
-   const [cs,os,ls,ss]=await Promise.all([tx.get(cfgRef),tx.get(ownerRef),tx.get(lotRef),tx.get(soldRef)]);
+   const soldRef=D.doc('rooms/'+room+'/sold/'+req.playerId);
+   const ownerRef=D.doc('rooms/'+room+'/owners/'+req.teamId);
+   const reqRef=D.doc('rooms/'+room+'/releaseRequests/'+requestId);
+   const [cs,ms,ls,ss,os,rs]=await Promise.all([tx.get(cfgRef),tx.get(metaRef),tx.get(lotRef),tx.get(soldRef),tx.get(ownerRef),tx.get(reqRef)]);
+   if(!ms.exists||ms.data().hostUid!==uid)throw new Error('Host authorization failed.');
+   if(ls.exists)throw new Error('The auction has started. Releases are locked.');
+   if(!rs.exists||rs.data().status!=='pending')throw new Error('This request has already been processed.');
+   if(!os.exists||os.data().uid!==req.requesterUid)throw new Error('The requester no longer owns this franchise.');
+   if(!ss.exists||ss.data().retained!==true||ss.data().team!==req.teamId)throw new Error('The player is no longer retained by this franchise.');
    if(!cs.exists)throw new Error('Room setup could not be read.');
-   if(!os.exists||os.data().uid!==uid)throw new Error('You no longer manage this franchise.');
-   if(ls.exists)throw new Error('The auction has already started. Retentions are locked.');
-   if(!ss.exists||ss.data().retained!==true||ss.data().team!==me.id)throw new Error('This retained player is no longer assigned to your team.');
-   const latest=cs.data(),players=(latest.players||[]).map(x=>x.id===playerId?{...x,retained:false,releasedRetention:true,base:3,auctionSet:'Released Retentions'}:x);
-   const released=[...new Set([...(latest.releasedRetentions||[]),playerId])];
+   const latest=cs.data();
+   const players=(latest.players||[]).map(x=>x.id===req.playerId?{...x,retained:false,releasedRetention:true,base:3,auctionSet:'Released Retentions'}:x);
+   const released=[...new Set([...(latest.releasedRetentions||[]),req.playerId])];
    const pool=players.filter(x=>!x.retained);
-   const existing=Array.isArray(latest.auctionOrder)?latest.auctionOrder.filter(id=>pool.some(x=>x.id===id)&&id!==playerId):[];
-   const baseOrder=existing.length===pool.length-1?existing:buildAuctionOrder(pool.filter(x=>x.id!==playerId)).order;
+   const existing=Array.isArray(latest.auctionOrder)?latest.auctionOrder.filter(id=>pool.some(x=>x.id===id)&&id!==req.playerId):[];
+   const baseOrder=existing.length===pool.length-1?existing:buildAuctionOrder(pool.filter(x=>x.id!==req.playerId)).order;
    const order=[...released.filter(id=>pool.some(x=>x.id===id)),...baseOrder.filter(id=>!released.includes(id))];
    const normalSets=(latest.auctionSets||[]).map(s=>({...s,ids:(s.ids||[]).filter(id=>!released.includes(id))})).filter(s=>s.ids.length);
    const releasedSet={name:'Released Retentions',ids:order.filter(id=>released.includes(id))};
    const auctionSets=[...(releasedSet.ids.length?[releasedSet]:[]),...normalSets];
    tx.update(cfgRef,{players,releasedRetentions:released,auctionOrder:order,auctionSets});
    tx.delete(soldRef);
+   tx.update(reqRef,{status:'approved',processedAt:Date.now(),processedBy:uid});
   });
-  if(!silent)toast('Player released. ₹'+price.toFixed(2)+' Cr returned to '+esc(me.name)+'.');
- }catch(e){toast('Could not release player: '+esc(e.message||e));throw e}
+  toast(req.playerName+' released. '+fmt(price)+' returned to '+req.teamName+'.');
+ }catch(e){toast('Could not approve release: '+esc(e.message||e))}
+}
+async function rejectReleaseRequest(requestId){
+ if(!host||!uid||!room)return toast('Only the host can reject release requests.');
+ const req=releaseRequests.find(r=>r.id===requestId);
+ if(!req||req.status!=='pending')return toast('This request is no longer pending.');
+ try{
+  await db.doc('releaseRequests/'+requestId).update({status:'rejected',processedAt:Date.now(),processedBy:uid});
+  toast('Release request rejected.');
+ }catch(e){toast('Could not reject request: '+esc(e.message||e))}
 }
 async function claim(id){
  if(!uid)return toast('Sign in to join a team.');
