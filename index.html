@@ -155,6 +155,7 @@ body.teams-mode main{max-width:1500px}
 .prow-t{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}.prow-t .tag{font-size:10px;padding:1px 6px}
 .tag.rt{color:var(--acc2);border-color:var(--acc2)}
 .prow-p{font:800 14px "Courier New",ui-monospace,monospace;color:var(--acc2);white-space:nowrap}
+.ret-release-btn{font-size:10px;font-weight:800;padding:4px 7px;border-color:var(--bad);color:var(--bad);border-radius:7px;align-self:center}.ret-release-btn:hover{background:var(--bad);color:#fff}
 .tcard-a{margin-top:14px}
 @media(max-width:560px){.rsec{min-height:0}.rgrid{grid-template-columns:1fr}.tstats{grid-template-columns:repeat(2,1fr)}.tcard-name{font-size:22px}}
 /* Players tab: one collapsible table per set */
@@ -324,6 +325,7 @@ let db,D,room='',meta=null,uid=null,host=false,cfg=null,lot=null,sold={},owners=
 const S=()=>cfg&&cfg.settings||SAMPLE.settings;
 const ply=id=>cfg&&cfg.players.find(p=>p.id===id);
 function auctionSetName(p){
+ if(p.releasedRetention===true)return 'Released Retentions';
  const explicit=String(p.auctionSet||p.set||'').trim();
  // Marquee players (flag marquee:true, or a set name containing "marquee") form the opening set(s)
  if(p.marquee===true)return /marquee/i.test(explicit)?explicit:'Marquee Set';
@@ -367,6 +369,8 @@ function buildAuctionOrder(players){
  const meta=new Map([...groups].map(([n,ids])=>[n,setMeta(n,ids.map(id=>byId.get(id)).filter(Boolean))]));
  const names=[...groups.keys()].sort((a,b)=>{
   const x=meta.get(a),y=meta.get(b),byName=a.localeCompare(b,undefined,{numeric:true});
+  const xr=/^released retentions$/i.test(a),yr=/^released retentions$/i.test(b);
+  if(xr||yr)return xr===yr?byName:(xr?-1:1);
   if(x.marquee&&y.marquee)return byName;
   return (x.marquee?0:1)-(y.marquee?0:1)||(x.capped?0:1)-(y.capped?0:1)||x.rr-y.rr||byName;
  });
@@ -706,24 +710,59 @@ function tick(){
 const ROLES=[['BAT','Batters','🏏'],['BOWL','Bowlers','🎯'],['AR','All-rounders','⚡'],['WK','Wicketkeepers','🧤']];
 function rTeams(v){
  const me=mine(),total=+S().purse||1;
- const prow=x=>{const p=x.p,os=isOverseas(p);
-  return `<div class="prow pl" onclick="stats('${p.id}')"><div class="mav">${avatar(p)}</div><div class="prow-i"><b>${esc(p.name)}</b><div class="prow-t">${x.s.retained?'<span class="tag rt">RETAINED</span>':''}${os?'<span class="tag">✈ '+esc(p.country||'Overseas')+'</span>':''}<span class="tag">OVR ${ovr(p)}</span></div></div><div class="prow-p">${fmt(x.s.price)}</div></div>`};
- const sec=(k,label,ic,list)=>`<div class="rsec" style="--rc:${RC[k]||'#888'}"><div class="rsec-h"><span>${ic} ${label}</span><span class="tag">${list.length}</span></div>${list.map(prow).join('')||'<div class="rsec-empty">No '+label.toLowerCase()+' yet</div>'}</div>`;
+ const prow=(x,teamId,canRelease)=>{const p=x.p,os=isOverseas(p),releaseBtn=x.s.retained&&canRelease&&!lot?`<button type="button" class="ret-release-btn" onclick="event.stopPropagation();releaseRetention('${p.id}')" title="Release this retained player before the auction">Release</button>`:'';
+  return `<div class="prow pl" onclick="stats('${p.id}')"><div class="mav">${avatar(p)}</div><div class="prow-i"><b>${esc(p.name)}</b><div class="prow-t">${x.s.retained?'<span class="tag rt">RETAINED</span>':''}${os?'<span class="tag">✈ '+esc(p.country||'Overseas')+'</span>':''}<span class="tag">OVR ${ovr(p)}</span></div></div><div class="prow-p">${fmt(x.s.price)}</div>${releaseBtn}</div>`};
+ const sec=(k,label,ic,list,teamId,canRelease)=>`<div class="rsec" style="--rc:${RC[k]||'#888'}"><div class="rsec-h"><span>${ic} ${label}</span><span class="tag">${list.length}</span></div>${list.map(x=>prow(x,teamId,canRelease)).join('')||'<div class="rsec-empty">No '+label.toLowerCase()+' yet</div>'}</div>`;
  v.innerHTML='<div class="tgrid">'+cfg.teams.map(t=>{
   const o=owners[t.id],isMine=me&&me.id===t.id;
   const roster=Object.entries(sold).filter(([id,s])=>s.team===t.id&&ply(id)).map(([id,s])=>({p:ply(id),s})).sort((a,b)=>b.s.price-a.s.price);
   const lf=left(t.id),sp=spent(t.id),pct=Math.max(0,Math.min(100,lf/total*100));
   const adj=cfg.retentionAdjustments?Number(cfg.retentionAdjustments[t.id]||0):0;
-  const known=ROLES.map(r=>r[0]),others=roster.filter(x=>!known.includes(x.p.role));
-  const sections=ROLES.map(([k,label,ic])=>sec(k,label,ic,roster.filter(x=>x.p.role===k))).join('')+(others.length?sec('?','Others','👤',others):'');
+  const known=ROLES.map(r=>r[0]),others=roster.filter(x=>!known.includes(x.p.role)),canRelease=isMine&&!lot;
+  const sections=ROLES.map(([k,label,ic])=>sec(k,label,ic,roster.filter(x=>x.p.role===k),t.id,canRelease)).join('')+(others.length?sec('?','Others','👤',others,t.id,canRelease):'');
   const btn=!o&&!me?`<button class="pri" onclick="claim('${t.id}')">Join this team</button>`:o&&o.uid===uid?`<button class="warn" onclick="release('${t.id}')">Leave</button>`:host&&o&&o.uid!==uid?`<button class="warn" onclick="release('${t.id}')">Remove owner</button>`:'';
   return `<div class="tcard ${isMine?'mine':''}" style="--team:${t.color}">
   <div class="tcard-h"><div><div class="tcard-name">${teamLogo(t,34)}${esc(t.name)}${isMine?' <span class="tag">YOU</span>':''}</div><div class="mut" style="margin-top:4px">${o?'Managed by <b>'+esc(o.name||'Player')+'</b>':'Unclaimed franchise'}</div></div><div class="tcard-purse"><small>PURSE LEFT</small><b>${fmt(lf)}</b></div></div>
   <div class="pbar"><i style="width:${pct}%"></i></div>
   <div class="tstats"><div><small>SQUAD</small><b>${roster.length}/${S().maxSquad}</b></div><div><small>OVERSEAS</small><b>✈ ${overseasCount(t.id)}/${overseasLimit()}</b></div><div><small>SPENT</small><b>${fmt(sp)}</b></div><div><small>RETAINED</small><b>${roster.filter(x=>x.s.retained).length}</b></div></div>
   ${adj?`<div class="mut" style="font-size:11px;margin:-4px 0 10px">Includes official retention-slab adjustment of ${fmt(adj)}</div>`:''}
+  ${isMine&&!lot&&roster.some(x=>x.s.retained)?'<div class="mut" style="font-size:11px;margin:0 0 9px">You can release any of your retained players before the first auction lot. Their retention price returns to your purse.</div>':''}
   <div class="rgrid">${sections}</div>
   ${btn?`<div class="row tcard-a">${btn}</div>`:''}</div>`}).join('')+'</div>';
+}
+async function releaseRetention(playerId){
+ if(!uid||!room)return toast('Join a room first.');
+ if(lot)return toast('Retentions can only be released before the first auction lot starts.');
+ const me=mine();if(!me)return toast('Choose your franchise first.');
+ const p=ply(playerId);
+ if(!p||!p.retained||p.retainedTeam!==me.id)return toast('You can only release a retained player from your own franchise.');
+ const price=Number(p.retentionPrice||0);
+ if(!confirm('Release '+p.name+' from '+me.name+'?\\n\\n₹'+price.toFixed(2)+' Cr will be returned to your purse. The player will enter the auction before the first regular set.'))return;
+ try{
+  await D.runTransaction(async tx=>{
+   const cfgRef=D.doc('rooms/'+room+'/cfg/main');
+   const ownerRef=D.doc('rooms/'+room+'/owners/'+me.id);
+   const lotRef=D.doc('rooms/'+room+'/live/lot');
+   const soldRef=D.doc('rooms/'+room+'/sold/'+playerId);
+   const [cs,os,ls,ss]=await Promise.all([tx.get(cfgRef),tx.get(ownerRef),tx.get(lotRef),tx.get(soldRef)]);
+   if(!cs.exists)throw new Error('Room setup could not be read.');
+   if(!os.exists||os.data().uid!==uid)throw new Error('You no longer manage this franchise.');
+   if(ls.exists)throw new Error('The auction has already started. Retentions are locked.');
+   if(!ss.exists||ss.data().retained!==true||ss.data().team!==me.id)throw new Error('This retained player is no longer assigned to your team.');
+   const latest=cs.data(),players=(latest.players||[]).map(x=>x.id===playerId?{...x,retained:false,releasedRetention:true,auctionSet:'Released Retentions'}:x);
+   const released=[...new Set([...(latest.releasedRetentions||[]),playerId])];
+   const pool=players.filter(x=>!x.retained);
+   const existing=Array.isArray(latest.auctionOrder)?latest.auctionOrder.filter(id=>pool.some(x=>x.id===id)&&id!==playerId):[];
+   const baseOrder=existing.length===pool.length-1?existing:buildAuctionOrder(pool.filter(x=>x.id!==playerId)).order;
+   const order=[...released.filter(id=>pool.some(x=>x.id===id)),...baseOrder.filter(id=>!released.includes(id))];
+   const normalSets=(latest.auctionSets||[]).map(s=>({...s,ids:(s.ids||[]).filter(id=>!released.includes(id))})).filter(s=>s.ids.length);
+   const releasedSet={name:'Released Retentions',ids:order.filter(id=>released.includes(id))};
+   const auctionSets=[...(releasedSet.ids.length?[releasedSet]:[]),...normalSets];
+   tx.update(cfgRef,{players,releasedRetentions:released,auctionOrder:order,auctionSets});
+   tx.delete(soldRef);
+  });
+  toast('Player released. ₹'+price.toFixed(2)+' Cr returned to '+esc(me.name)+'.');
+ }catch(e){toast('Could not release player: '+esc(e.message||e))}
 }
 async function claim(id){
  if(!uid)return toast('Sign in to join a team.');
